@@ -4,7 +4,7 @@ from django.utils import timezone
 
 # Create your models here.
 
-class Author(models.Model):
+class Autor(models.Model):
     nombre=models.CharField(max_length=50)
     apellido=models.CharField(max_length=50)
     bibliografia  = models.CharField(max_length=200, blank= True, null= True)
@@ -14,7 +14,7 @@ class Author(models.Model):
     
 class Libro(models.Model):
     titulo=models.CharField(max_length=50)
-    author=models.ForeignKey(Author,related_name="Libro", on_delete= models.PROTECT)
+    autor=models.ForeignKey(Autor,related_name="Libro", on_delete= models.PROTECT)
     disponible = models.BooleanField(default=True)
     bibliografia  = models.CharField(max_length=200, blank= True, null= True)
     
@@ -22,10 +22,10 @@ class Libro(models.Model):
         return self.titulo
     
 class Prestamos(models.Model):
-    libro= models.ForeignKey(Libro, related_name="Prestamos", on_delete= models.PROTECT)
-    usuario =models.ForeignKey(settings.AUTH_USER_MODEL, related_name="Prestamos" , on_delete= models.PROTECT)
-    fecha =models.DateField(default=timezone.now)
-    fecha_max=models.DateField()
+    libro = models.ForeignKey(Libro, related_name="Prestamos", on_delete= models.PROTECT)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="Prestamos" , on_delete= models.PROTECT)
+    fecha = models.DateField(default=timezone.now)
+    fecha_max = models.DateField()
     fecha_devolucion = models.DateField(blank=True, null=True) #Permite a django grabar en blanco y en nulo
     
     def __str__(self):
@@ -45,10 +45,9 @@ class Prestamos(models.Model):
 class Multa(models.Model):
     prestamo =  models.ForeignKey(Prestamos, related_name="Multa", on_delete= models.PROTECT)
     tipo = models.CharField(max_length=10, choices=(('r','retraso'), ('p','perdida'), ('d', 'deterioro')))
-    monto = models.DecimalField(max_length=3, decimal_places=2, default=0, max_digits=4)
+    monto = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     pagada  = models.BooleanField(default=False)
     fecha  =  models.DateField(default=timezone.now)
-        
         
     def __str__(self):
         return f"Multa {self.tipo} - {self.monto} - {self.prestamo}"

@@ -1,0 +1,28 @@
+{% extends 'index.html' %}
+<!-- Seccion Libros -->
+{% block content %}
+<h2>Crear Libro</h2>
+<form method="post">
+    {% csrf_token %}
+    <label for="id_titulo" name=`titulo`>Titulo</label>
+    <input type="text" id="id_titulo" name="titulo">
+
+    <label for="id_autor" name=`autor`>Autor</label>
+    <select name="autor" id="id_autor" required>
+        <option value="">Seleccione un autor</option>
+        {% for autor in autores %}
+        <option value="{{ autor.id }}">
+            {{ autor.nombre }} - {{ autor.apellido }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <label for="id_disponible" name=`disponible`>Disponible</label>
+    <input type="checkbox" id="id_disponible" name="disponible">
+
+    <label for="id_bibliografia" name=`bibliografia`>Bibliografia</label>
+    <input type="text" id="id_bibliografia" name="bibliografia">
+
+    <button type="submit">Guardar</button>
+</form>
+{% endblock %}
