@@ -224,20 +224,33 @@
         </div>
         <nav>
             <a href="#" class="menu-item active">
-                <span>🏠 Dashboard</span>
+                <span>Dashboard</span>
             </a>
             <a href="#" class="menu-item">
-                <span>📚 Libros</span>
+                <span>Libros</span>
             </a>
             <a href="#" class="menu-item">
-                <span>👥 Autores</span>
+                <span>Autores</span>
             </a>
             <a href="#" class="menu-item">
-                <span>🔄 Préstamos</span>
+                <span>Préstamos</span>
             </a>
             <a href="#" class="menu-item">
-                <span>⚙️ Configuración</span>
+                <span>Configuración</span>
             </a>
+            {%if not user.is_authenticated %}
+            <a href="#" class="menu-item">
+                <span>Inicio de Sesión</span>
+            </a>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+
+                <button type="submit">Cerrar Sesión</button>
+            </form>
+            {% endif %}
         </nav>
     </aside>
 

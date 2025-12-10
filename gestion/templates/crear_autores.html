@@ -1,15 +1,16 @@
 {% extends 'index.html' %}
 <!-- Seccion Autores -->
 {% block content %}
-<h2>Crear Autor</h2>
+<h2>{{ titulo }}</h2>
 <form method="post">
     {% csrf_token %}
     <label for="id_nombre" name=`nombre`>Nombre</label>
-    <input type="text" id="id_nombre" name="nombre">
+    <input type="text" id="id_nombre" name="nombre" value="{{ autor.nombre | default_if_none:'' }}" required>
     <label for="id_apellido" name=`apellido`>Apellido</label>
-    <input type="text" id="id_apellido" name="apellido">
+    <input type="text" id="id_apellido" name="apellido" value="{{ autor.apellido | default_if_none:'' }}" required>
     <label for="id_bibliografia" name=`bibliografia`>Bibliografia</label>
-    <input type="text" id="id_bibliografia" name="bibliografia">
-    <button type="submit">Guardar</button>
+    <input type="text" id="id_bibliografia" name="bibliografia" value="{{ autor.bibliografia | default_if_none:'' }}"
+        required>
+    <button type="submit">{{ texto_boton }}</button>
 </form>
 {% endblock %}

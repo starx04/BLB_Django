@@ -1,0 +1,11 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<h2>Registro de usuario</h2>
+<form method="post">
+    {{ form.non_field_errors }}
+    {% csrf_token %}
+    {{ form.as.div }}
+    <button type="submit">Registrarse</button>
+</form>
+{% endblock %}

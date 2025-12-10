@@ -28,6 +28,13 @@ class Prestamos(models.Model):
     fecha_max = models.DateField()
     fecha_devolucion = models.DateField(blank=True, null=True) #Permite a django grabar en blanco y en nulo
     
+    class Meta:
+        permissions = (
+            ("ver_prestamos", "Puede Ver Prestamos"),
+            ("gestionar_prestamos", "Puede Gestionar Prestamos"),
+        )
+
+
     def __str__(self):
         return f"Prestamo de {self.libro} a {self.usuario}"
     
