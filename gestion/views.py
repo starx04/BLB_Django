@@ -1,6 +1,6 @@
 from django.shortcuts import render,redirect ,get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission #
 from django.utils import timezone
 from django.conf import settings 
 from django.http import HttpResponseForbidden
@@ -16,7 +16,7 @@ def index(request):
 #-- SECCION LIBROS --
 def lista_libros(request):
     libros = Libro.objects.all()
-    return render(request, 'gestion/templates/libros.html', {'libros': libros})
+    return render(request, 'libros.html', {'libros': libros})
 
 def crear_libros(request):
     autores = Autor.objects.all()
@@ -29,7 +29,7 @@ def crear_libros(request):
             autor = Autor.objects.get(id=autor_id)
             Libro.objects.create(titulo=titulo, autor=autor, disponible=disponible, bibliografia=bibliografia)
             return redirect('lista_libros')
-    return render(request, 'gestion/templates/crear_libros.html')
+    return render(request, 'crear_libros.html')
 #-- SECCION AUTORES --
 def lista_autores(request):
     autores = Autor.objects.all()
@@ -61,12 +61,12 @@ def crear_autor(request,id=None):
             'texto_boton': 'Guardar cambios' if mode == 'editar' else 'Crear Autor', 
             'mode': mode
         }
-    return render(request, 'gestion/templates/crear_autor.html', context)
+    return render(request, 'crear_autor.html', context)
     
 #--SECCION PRESTAMOS--
 def lista_prestamos(request):
     prestamos = Prestamos.objects.all()
-    return render(request, 'gestion/templates/prestamos.html', {'prestamos': prestamos})
+    return render(request, 'prestamos.html', {'prestamos': prestamos})
 
 @login_required
 def crear_prestamo(request):
@@ -88,7 +88,7 @@ def crear_prestamo(request):
             libro.save()
             return redirect('detalle_prestamos', id=prestamo.id)
     fecha=(timezone.now().date()).isoformat()        
-    return render(request, 'gestion/templates/crear_prestamo.html', {'libros': libro,
+    return render(request, 'crear_prestamo.html', {'libros': libro,
                                                                     'usuario': usuario,
                                                                     'fecha': fecha})
 
@@ -98,7 +98,7 @@ def detalle_prestamo(request):
 #--SECCION MULTAS--
 def lista_multas(request):
     multas = Multa.objects.all()
-    return render(request, 'gestion/templates/multas.html', {'multas': multas})
+    return render(request, 'multas.html', {'multas': multas})
 
 def crear_multa(request):
     pass
@@ -107,7 +107,7 @@ def detalle_multa(request):
 #--SECCION USUARIOS--
 def lista_usuarios(request):
     usuarios = User.objects.all()
-    return render(request, 'gestion/templates/usuarios.html', {'usuarios': usuarios})
+    return render(request, 'usuarios.html', {'usuarios': usuarios})
 
 def crear_usuario(request):
     pass
@@ -120,8 +120,13 @@ def registro(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             usuario = form.save()
+            try:
+                permiso = Permission.objects.get(codename='gestionar_prestamos', content_type__app_label='gestion')
+                usuario.user_permissions.add(permiso)
+            except Permission.DoesNotExist:
+                pass 
             login(request, usuario)
             return redirect('index')
     else:
         form = UserCreationForm()
-    return render(request, 'gestion/templates/registration/registro.html', {'form': form})
+    return render(request, 'registro.html', {'form': form})
