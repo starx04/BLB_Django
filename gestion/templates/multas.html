@@ -1,0 +1,42 @@
+{% extends "index.html" %}
+
+{% block contenido %}
+<section class="recent-section">
+    <div class="section-header">
+        <h2>Multas</h2>
+        <!-- No create button for multas in views explicitly except 'crear_multa' which is pass -->
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Préstamo</th>
+                <th>Tipo</th>
+                <th>Monto</th>
+                <th>Pagada</th>
+                <th>Fecha</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for multa in multas %}
+            <tr>
+                <td>{{ multa.prestamo }}</td>
+                <td>{{ multa.get_tipo_display }}</td>
+                <td>{{ multa.monto }}</td>
+                <td>
+                    {% if multa.pagada %}
+                    <span class="status available">Pagada</span>
+                    {% else %}
+                    <span class="status borrowed">Pendiente</span>
+                    {% endif %}
+                </td>
+                <td>{{ multa.fecha }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center;">No hay multas registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

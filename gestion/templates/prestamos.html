@@ -1,0 +1,40 @@
+{% extends "index.html" %}
+
+{% block contenido %}
+<section class="recent-section">
+    <div class="section-header">
+        <h2>Préstamos</h2>
+        <a href="{% url 'crear_prestamo' %}" class="btn-add">+ Nuevo Préstamo</a>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Libro</th>
+                <th>Usuario</th>
+                <th>Fecha Préstamo</th>
+                <th>Fecha Máx</th>
+                <th>Devolución</th>
+                <th>Días Retraso</th>
+                <th>Multa</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prestamo in prestamos %}
+            <tr>
+                <td>{{ prestamo.libro }}</td>
+                <td>{{ prestamo.usuario }}</td>
+                <td>{{ prestamo.fecha }}</td>
+                <td>{{ prestamo.fecha_max|default_if_none:"-" }}</td>
+                <td>{{ prestamo.fecha_devolucion|default_if_none:"-" }}</td>
+                <td>{{ prestamo.dias_retraso|default_if_none:"0" }}</td>
+                <td>{{ prestamo.multa_retraso|default_if_none:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center;">No hay préstamos registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

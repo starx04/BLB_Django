@@ -1,27 +1,38 @@
 {% extends "index.html" %}
 
 {% block contenido %}
-<h2> Libros </h2>
-<table style="border: 1px solid">
-    <tr style="border: 1px solid">
-        <td style="border: 1px solid">Titulo</td>
-        <td style="border: 1px solid">Autor</td>
-        <td style="border: 1px solid">Disponible</td>
-    </tr>
-    {% for libro in libros %}
-    <tr style="border: 1px solid">
-        <td style="border: 1px solid">
-            {{ libro.titulo }}
-        </td>
-        <td style="border: 1px solid">
-            {{ libro.autor }}
-        </td>
-        <td style="border: 1px solid">
-            {{ libro.disponible}}
-        </td>
-    </tr>
-    {% endfor %}
-
-</table>
-
+<section class="recent-section">
+    <div class="section-header">
+        <h2>Libros</h2>
+        <a href="{% url 'crear_libros' %}" class="btn-add">+ Nuevo Libro</a>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Titulo</th>
+                <th>Autor</th>
+                <th>Disponible</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for libro in libros %}
+            <tr>
+                <td>{{ libro.titulo }}</td>
+                <td>{{ libro.autor }}</td>
+                <td>
+                    {% if libro.disponible %}
+                    <span class="status available">Disponible</span>
+                    {% else %}
+                    <span class="status borrowed">Prestado</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align: center;">No hay libros registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
 {% endblock %}

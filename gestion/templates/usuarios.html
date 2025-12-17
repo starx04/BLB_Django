@@ -1,0 +1,40 @@
+{% extends "index.html" %}
+
+{% block contenido %}
+<section class="recent-section">
+    <div class="section-header">
+        <h2>Usuarios</h2>
+        <!-- No create button -->
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Email</th>
+                <th>Activo</th>
+                <th>Staff</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for usuario in usuarios %}
+            <tr>
+                <td>{{ usuario.username }}</td>
+                <td>{{ usuario.email|default:"-" }}</td>
+                <td>
+                    {% if usuario.is_active %}
+                    <span class="status available">Si</span>
+                    {% else %}
+                    <span class="status borrowed">No</span>
+                    {% endif %}
+                </td>
+                <td>{{ usuario.is_staff|yesno:"Si,No" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align: center;">No hay usuarios registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

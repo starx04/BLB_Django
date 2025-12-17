@@ -1,0 +1,22 @@
+{% extends 'index.html' %}
+
+{% block contenido %}
+<div class="section-header">
+    <h2>{{ titulo }}</h2>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <label for="id_nombre">Nombre</label>
+    <input type="text" id="id_nombre" name="nombre" value="{{ autor.nombre|default_if_none:'' }}" required>
+
+    <label for="id_apellido">Apellido</label>
+    <input type="text" id="id_apellido" name="apellido" value="{{ autor.apellido|default_if_none:'' }}" required>
+
+    <label for="id_bibliografia">Bibliografia</label>
+    <input type="text" id="id_bibliografia" name="bibliografia" value="{{ autor.bibliografia|default_if_none:'' }}"
+        required>
+
+    <button type="submit">{{ texto_boton }}</button>
+</form>
+{% endblock %}

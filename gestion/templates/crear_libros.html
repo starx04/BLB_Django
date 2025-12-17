@@ -1,13 +1,16 @@
 {% extends 'index.html' %}
-<!-- Seccion Libros -->
-{% block content %}
-<h2>Crear Libro</h2>
+
+{% block contenido %}
+<div class="section-header">
+    <h2>Crear Libro</h2>
+</div>
+
 <form method="post">
     {% csrf_token %}
-    <label for="id_titulo" name=`titulo`>Titulo</label>
-    <input type="text" id="id_titulo" name="titulo">
+    <label for="id_titulo">Titulo</label>
+    <input type="text" id="id_titulo" name="titulo" required>
 
-    <label for="id_autor" name=`autor`>Autor</label>
+    <label for="id_autor">Autor</label>
     <select name="autor" id="id_autor" required>
         <option value="">Seleccione un autor</option>
         {% for autor in autores %}
@@ -17,11 +20,14 @@
         {% endfor %}
     </select>
 
-    <label for="id_disponible" name=`disponible`>Disponible</label>
-    <input type="checkbox" id="id_disponible" name="disponible">
+    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+        <input type="checkbox" id="id_disponible" name="disponible"
+            style="width: auto; margin-right: 10px; margin-bottom: 0;">
+        <label for="id_disponible" style="margin-bottom: 0;">Disponible</label>
+    </div>
 
-    <label for="id_bibliografia" name=`bibliografia`>Bibliografia</label>
-    <input type="text" id="id_bibliografia" name="bibliografia">
+    <label for="id_bibliografia">Bibliografia</label>
+    <input type="text" id="id_bibliografia" name="bibliografia" required>
 
     <button type="submit">Guardar</button>
 </form>

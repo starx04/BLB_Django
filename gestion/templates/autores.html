@@ -1,28 +1,37 @@
 {% extends "index.html" %}
 
-<!-- Seccion de autores -->
 {% block contenido %}
-<h2> AUTORES </h2>
-<table style="border: 1px solid">
-    <tr style="border: 1px solid">
-        <td style="border: 1px solid">Nombre</td>
-        <td style="border: 1px solid">Apellido</td>
-        <td style="border: 1px solid">Bibliografía</td>
-    </tr>
-    {% for autor in autores %}
-    <tr style="border: 1px solid">
-        <td style="border: 1px solid">
-            {{ autor.nombre }}
-        </td>
-        <td style="border: 1px solid">
-            {{ autor.apellido }}
-        </td>
-        <td style="border: 1px solid">
-            {{ autor.bibliografia}}
-        </td>
-    </tr>
-    {% endfor %}
-
-</table>
-
+<section class="recent-section">
+    <div class="section-header">
+        <h2>Autores</h2>
+        <a href="{% url 'crear_autor' %}" class="btn-add">+ Nuevo Autor</a>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Bibliografía</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for autor in autores %}
+            <tr>
+                <td>{{ autor.nombre }}</td>
+                <td>{{ autor.apellido }}</td>
+                <td>{{ autor.bibliografia }}</td>
+                <td>
+                    <a href="{% url 'editar_autor' autor.id %}"
+                        style="color: var(--neon-blue); text-decoration: none;">Editar</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align: center;">No hay autores registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
 {% endblock %}
