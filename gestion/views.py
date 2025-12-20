@@ -23,11 +23,14 @@ def crear_libros(request):
     if request.method == 'POST':
         titulo = request.POST.get('titulo')
         autor_id = request.POST.get('autor')
-        disponible = request.POST.get('disponible')
+        disponible = request.POST.get('disponible') == 'on'
         bibliografia = request.POST.get('bibliografia')
-        if titulo and autor_id and disponible and bibliografia:
+        imagen = request.FILES.get('imagen')
+        
+        if titulo and autor_id:
             autor = Autor.objects.get(id=autor_id)
-            Libro.objects.create(titulo=titulo, autor=autor, disponible=disponible, bibliografia=bibliografia)
+            Libro.objects.create(titulo=titulo, autor=autor, disponible=disponible, 
+                               bibliografia=bibliografia, imagen=imagen)
             return redirect('lista_libros')
     return render(request, 'crear_libros.html', {'autores': autores})
 #-- SECCION AUTORES --

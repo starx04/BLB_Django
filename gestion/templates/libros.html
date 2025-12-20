@@ -9,6 +9,7 @@
     <table>
         <thead>
             <tr>
+                <th>Imagen</th>
                 <th>Titulo</th>
                 <th>Autor</th>
                 <th>Disponible</th>
@@ -17,6 +18,14 @@
         <tbody>
             {% for libro in libros %}
             <tr>
+                <td>
+                    {% if libro.imagen %}
+                    <img src="{{ libro.imagen.url }}" alt="{{ libro.titulo }}"
+                        style="max-height: 100px; max-width: 50px;">
+                    {% else %}
+                    No Ingresada
+                    {% endif %}
+                </td>
                 <td>{{ libro.titulo }}</td>
                 <td>{{ libro.autor }}</td>
                 <td>

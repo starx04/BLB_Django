@@ -5,7 +5,7 @@
     <h2>Crear Libro</h2>
 </div>
 
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <label for="id_titulo">Titulo</label>
     <input type="text" id="id_titulo" name="titulo" required>
@@ -28,6 +28,9 @@
 
     <label for="id_bibliografia">Bibliografia</label>
     <input type="text" id="id_bibliografia" name="bibliografia" required>
+
+    <label for="id_imagen">Imagen: </label>
+    <input type="file" id="id_imagen" name="imagen" accept="image/*"></br>
 
     <button type="submit">Guardar</button>
 </form>
