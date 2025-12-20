@@ -5,6 +5,13 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     path("",index,name="index"),
 
+    #Path class views
+    path('libros_list/', LibroListView.as_view(), name="libro_list"),
+    path('libros/nuevo/', LibroCreateView.as_view(), name="libro_create"),
+    path('libros/<int:pk>/editar/', LibroUpdateView.as_view(), name="libro_update"),
+    path('libros/<int:pk>/eliminar/', LibroDeleteView.as_view(), name="libro_delete"),
+    path('libros/<int:pk>/', LibroDetailView.as_view(), name="libro_detail"),
+
     #Gestion Usuarios
     path('login/',auth_views.LoginView.as_view(),name="login"),
     path('logout/',auth_views.LogoutView.as_view(next_page="login"),name="logout"),

@@ -5,7 +5,7 @@
     <h2>{{ titulo }}</h2>
 </div>
 
-<form method="post">
+<form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
     <label for="id_nombre">Nombre</label>
     <input type="text" id="id_nombre" name="nombre" value="{{ autor.nombre|default_if_none:'' }}" required>
@@ -16,6 +16,9 @@
     <label for="id_bibliografia">Bibliografia</label>
     <input type="text" id="id_bibliografia" name="bibliografia" value="{{ autor.bibliografia|default_if_none:'' }}"
         required>
+
+    <label for="id_imagen">Imagen: </label>
+    <input type="file" id="id_imagen" name="imagen" accept="image/*"></br>
 
     <button type="submit">{{ texto_boton }}</button>
 </form>

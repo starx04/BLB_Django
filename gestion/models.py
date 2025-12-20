@@ -8,6 +8,7 @@ class Autor(models.Model):
     nombre=models.CharField(max_length=50)
     apellido=models.CharField(max_length=50)
     bibliografia  = models.CharField(max_length=200, blank= True, null= True)
+    imagen = models.ImageField(upload_to='autores/', blank=True, null=True)
     
     def __str__(self):
         return f"{self.nombre} {self.apellido} {self.bibliografia}"
@@ -17,7 +18,8 @@ class Libro(models.Model):
     autor=models.ForeignKey(Autor,related_name="Libro", on_delete= models.PROTECT)
     disponible = models.BooleanField(default=True)
     bibliografia  = models.CharField(max_length=200, blank= True, null= True)
-    
+    imagen = models.ImageField(upload_to='libros/', blank=True, null=True)
+
     def __str__(self):
         return self.titulo
     
@@ -44,6 +46,8 @@ class Prestamos(models.Model):
         fecha_ref =  self.fecha_devolucion or hoy
         if  fecha_ref > self.fecha_max:
             return (fecha_ref + self.fecha_devolucion).days
+        else:
+            return 0
     @property
     def multa_retraso(self):
         tarifa = 0.50

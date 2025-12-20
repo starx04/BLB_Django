@@ -1,6 +1,6 @@
 from django.shortcuts import render,redirect ,get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User, Permission #
+from django.contrib.auth.models import User, Permission
 from django.utils import timezone
 from django.conf import settings 
 from django.http import HttpResponseForbidden
@@ -47,20 +47,26 @@ def crear_autor(request,id=None):
         nombre = request.POST.get('nombre')
         apellido = request.POST.get('apellido')
         bibliografia = request.POST.get('bibliografia')
+        imagen = request.FILES.get('imagen')
+        
         if autor == None:
-            Autor.objects.create(nombre=nombre, apellido=apellido, bibliografia=bibliografia)
+            Autor.objects.create(nombre=nombre, apellido=apellido,
+                                 bibliografia=bibliografia, imagen=imagen )
         else:
             autor.nombre = nombre
             autor.apellido = apellido
             autor.bibliografia = bibliografia
+            if imagen:
+                autor.imagen = imagen
             autor.save()
         return redirect('lista_autores')
-        context = {
-            'autor': autor,
-            'titulo': 'Editar Autor' if mode == 'editar' else 'Crear Autor',
-            'texto_boton': 'Guardar cambios' if mode == 'editar' else 'Crear Autor', 
-            'mode': mode
-        }
+        
+    context = {
+        'autor': autor,
+        'titulo': 'Editar Autor' if mode == 'Editar' else 'Crear Autor',
+        'texto_boton': 'Guardar cambios' if mode == 'Editar' else 'Crear Autor', 
+        'mode': mode
+    }
     return render(request, 'crear_autor.html', context)
     
 #--SECCION PRESTAMOS--
@@ -75,9 +81,9 @@ def crear_prestamo(request):
     libros = Libro.objects.filter(disponible=True)
     usuarios = User.objects.all()
     if request.method == 'POST':
-        libro_id = request.method.POST.get('libro')
-        usuario_id = request.method.POST.get('usuario')
-        fecha_prestamo = request.method.POST.get('fecha_prestamo')
+        libro_id = request.POST.get('libro')
+        usuario_id = request.POST.get('usuario')
+        fecha_prestamo = request.POST.get('fecha_prestamo')
         if libro_id and usuario_id and fecha_prestamo:
             libro = get_object_or_404(Libro, id=libro_id)
             usuario = get_object_or_404(User, id=usuario_id)
@@ -138,13 +144,13 @@ from django.urls import reverse_lazy
 
 class LibroListView(LoginRequiredMixin, ListView):
     model = Libro
-    template = 'gestion/templates/libros_view.html'
+    template_name = 'gestion/templates/libros_view.html'
     context_object_name = 'libros'
     paginate_by = 10
 
-class LibroDetalleView(LoginRequiredMixin, DetailView):
+class LibroDetailView(LoginRequiredMixin, DetailView):
     model = Libro
-    template = 'gestion/templates/detalle_libro.html'
+    template_name = 'gestion/templates/detalle_libro.html'
     context_object_name = 'libro'
 
 class LibroCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
