@@ -144,6 +144,61 @@ def registro(request):
 from django.views.generic import ListView , CreateView , UpdateView , DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin,  PermissionRequiredMixin
 from django.urls import reverse_lazy
+from .services import OpenLibraryClient
+from .forms import BusquedaLibroForm
+
+#--SECCION API--
+@login_required
+def buscar_libro_api(request):
+    """
+    Vista para buscar libros y autores usando OpenLibrary API.
+    """
+    resultado = None
+    resultados_busqueda = []
+    
+    if request.method == 'POST':
+        form = BusquedaLibroForm(request.POST)
+        if form.is_valid():
+            client = OpenLibraryClient()
+            isbn = form.cleaned_data.get('isbn')
+            termino = form.cleaned_data.get('termino')
+            
+            if isbn:
+                # Busqueda exacta por ISBN
+                libro_data = client.get_book_by_isbn(isbn)
+                if libro_data:
+                    # Normalizamos un poco la estructura para el template
+                    cover_id = None
+                    if 'covers' in libro_data and libro_data['covers']:
+                         cover_id = libro_data['covers'][0]
+                    
+                    resultado = {
+                        'titulo': libro_data.get('title'),
+                        'autores': libro_data.get('authors', [{'name': 'Desconocido'}]), # La API de datos a veces devuelve objetos, a veces strings, depende del endpoint
+                        'cover_url': client.get_cover_url(cover_id, 'M'),
+                        'isbn': isbn,
+                        'paginas': libro_data.get('number_of_pages', 'N/A')
+                    }
+            elif termino:
+                # Busqueda general
+                docs = client.search_books(termino)
+                for doc in docs:
+                    cover_i = doc.get('cover_i')
+                    resultados_busqueda.append({
+                        'titulo': doc.get('title'),
+                        'autor': doc.get('author_name', ['Desconocido'])[0],
+                        'anio': doc.get('first_publish_year', 'N/A'),
+                        'isbn': doc.get('isbn', [''])[0],
+                        'cover_url': client.get_cover_url(cover_i, 'S')
+                    })
+    else:
+        form = BusquedaLibroForm()
+
+    return render(request, 'gestion/templates/buscar_libro_api.html', {
+        'form': form,
+        'resultado': resultado,
+        'resultados_busqueda': resultados_busqueda
+    })
 
 class LibroListView(LoginRequiredMixin, ListView):
     model = Libro

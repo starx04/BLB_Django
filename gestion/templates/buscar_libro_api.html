@@ -1,0 +1,75 @@
+{% extends 'index.html' %}
+
+{% block contenido %}
+<div class="section-header">
+    <h2>Buscar en OpenLibrary</h2>
+</div>
+
+<div class="card" style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #333; border-radius: 8px;">
+    <form method="post">
+        {% csrf_token %}
+        <div style="margin-bottom: 1rem;">
+            {{ form.termino.label_tag }}
+            {{ form.termino }}
+        </div>
+        <div style="text-align: center; margin: 0.5rem;"> - O - </div>
+        <div style="margin-bottom: 1rem;">
+            {{ form.isbn.label_tag }}
+            {{ form.isbn }}
+        </div>
+        <button type="submit">Buscar</button>
+    </form>
+</div>
+
+{% if resultado %}
+<div class="result-single"
+    style="border: 1px solid var(--neon-blue); padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
+    <h3>Resultado Exacto (ISBN: {{ resultado.isbn }})</h3>
+    <div style="display: flex; gap: 2rem;">
+        {% if resultado.cover_url %}
+        <img src="{{ resultado.cover_url }}" alt="Portada" style="max-width: 150px; border-radius: 4px;">
+        {% endif %}
+        <div>
+            <p><strong>Título:</strong> {{ resultado.titulo }}</p>
+            <p><strong>Páginas:</strong> {{ resultado.paginas }}</p>
+            <!-- Nota: Autores a veces viene como lista de objetos u referencias en la API cruda -->
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if resultados_busqueda %}
+<section>
+    <h3>Resultados de Búsqueda</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Portada</th>
+                <th>Título</th>
+                <th>Autor</th>
+                <th>Año</th>
+                <th>ISBN (aprox)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for libro in resultados_busqueda %}
+            <tr>
+                <td>
+                    {% if libro.cover_url %}
+                    <img src="{{ libro.cover_url }}" alt="Portada" style="max-width: 50px;">
+                    {% else %}
+                    N/A
+                    {% endif %}
+                </td>
+                <td>{{ libro.titulo }}</td>
+                <td>{{ libro.autor }}</td>
+                <td>{{ libro.anio }}</td>
+                <td>{{ libro.isbn }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+{% endblock %}

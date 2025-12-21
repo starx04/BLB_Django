@@ -41,4 +41,6 @@ urlpatterns = [
     path('multas/', lista_multas, name="lista_multa"),
     path('multas/nuevo/<int:prestamo_id>', crear_multa, name="crear_multa"),
 
+    # API
+    path('api/buscar/', buscar_libro_api, name="buscar_libro_api"),
 ]
