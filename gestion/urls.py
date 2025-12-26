@@ -43,4 +43,5 @@ urlpatterns = [
 
     # API
     path('api/buscar/', buscar_libro_api, name="buscar_libro_api"),
+    path('api/guardar/', guardar_libro_api, name="guardar_libro_api"),
 ]

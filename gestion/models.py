@@ -18,6 +18,7 @@ class Libro(models.Model):
     autor=models.ForeignKey(Autor,related_name="Libro", on_delete= models.PROTECT)
     disponible = models.BooleanField(default=True)
     bibliografia  = models.CharField(max_length=200, blank= True, null= True)
+    isbn = models.CharField(max_length=13, blank=True, null=True, unique=True)
     imagen = models.ImageField(upload_to='libros/', blank=True, null=True)
 
     def __str__(self):

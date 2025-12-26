@@ -32,7 +32,17 @@
         <div>
             <p><strong>Título:</strong> {{ resultado.titulo }}</p>
             <p><strong>Páginas:</strong> {{ resultado.paginas }}</p>
-            <!-- Nota: Autores a veces viene como lista de objetos u referencias en la API cruda -->
+            <form method="post" action="{% url 'guardar_libro_api' %}" style="margin-top: 1rem;">
+                {% csrf_token %}
+                <input type="hidden" name="titulo" value="{{ resultado.titulo }}">
+                <!-- Tomamos el primer autor si es lista -->
+                <input type="hidden" name="autor" value="{{ resultado.autores.0.name }}">
+                <input type="hidden" name="isbn" value="{{ resultado.isbn }}">
+                <input type="hidden" name="cover_url" value="{{ resultado.cover_url }}">
+                <button type="submit"
+                    style="background-color: var(--neon-blue); color: #fff; border: none; padding: 0.5rem 1rem; cursor: pointer;">Guardar
+                    en Biblioteca</button>
+            </form>
         </div>
     </div>
 </div>
@@ -49,6 +59,7 @@
                 <th>Autor</th>
                 <th>Año</th>
                 <th>ISBN (aprox)</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -65,6 +76,17 @@
                 <td>{{ libro.autor }}</td>
                 <td>{{ libro.anio }}</td>
                 <td>{{ libro.isbn }}</td>
+                <td>
+                    <form method="post" action="{% url 'guardar_libro_api' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="titulo" value="{{ libro.titulo }}">
+                        <input type="hidden" name="autor" value="{{ libro.autor }}">
+                        <input type="hidden" name="isbn" value="{{ libro.isbn }}">
+                        <input type="hidden" name="cover_url" value="{{ libro.cover_url }}">
+                        <button type="submit"
+                            style="background-color: var(--neon-blue); color: #fff; border: none; padding: 0.5rem; cursor: pointer;">Guardar</button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

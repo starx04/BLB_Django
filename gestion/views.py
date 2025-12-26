@@ -1,4 +1,5 @@
 from django.shortcuts import render,redirect ,get_object_or_404
+import requests
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User, Permission
 from django.utils import timezone
@@ -20,18 +21,87 @@ def lista_libros(request):
 
 def crear_libros(request):
     autores = Autor.objects.all()
+    
     if request.method == 'POST':
+        # Recogemos datos del formulario
         titulo = request.POST.get('titulo')
-        autor_id = request.POST.get('autor')
-        disponible = request.POST.get('disponible') == 'on'
+        nombre_autor_texto = request.POST.get('autor_texto')
+        autor_id_select = request.POST.get('autor_select') # Por si acaso se restableciera el select
+        isbn = request.POST.get('isbn')
+        cover_url = request.POST.get('cover_url')
         bibliografia = request.POST.get('bibliografia')
         imagen = request.FILES.get('imagen')
-        
-        if titulo and autor_id:
-            autor = Autor.objects.get(id=autor_id)
-            Libro.objects.create(titulo=titulo, autor=autor, disponible=disponible, 
-                               bibliografia=bibliografia, imagen=imagen)
-            return redirect('lista_libros')
+        disponible = request.POST.get('disponible') == 'on'
+        confirmar_duplicado = request.POST.get('confirmar_duplicado') == 'true'
+
+        # 1. VERIFICACIÓN DE DUPLICADO
+        # Si NO ha confirmado aún y el ISBN ya existe...
+        if isbn and Libro.objects.filter(isbn=isbn).exists() and not confirmar_duplicado:
+            libro_existente = Libro.objects.filter(isbn=isbn).first()
+            context = {
+                'autores': autores,
+                'advertencia_duplicado': True,
+                'isbn_duplicado': isbn,
+                'titulo_existente': libro_existente.titulo,
+                # Pasamos los valores de vuelta para que no se pierdan en el formulario
+                'request': request 
+            }
+            return render(request, 'crear_libros.html', context)
+
+        # 2. LOGICA DE GUARDADO (Si no hay duplicado O el usuario confirmó)
+        if titulo and (nombre_autor_texto or autor_id_select):
+            
+            # Gestionar Autor: Preferencia al texto escrito, si no buscar coincidencia
+            autor_final = None
+            
+            # Intentamos parsear el nombre escrito
+            nombre = nombre_autor_texto.strip()
+            partes = nombre.split(' ')
+            if len(partes) > 1:
+                apellido_nuevo = partes[-1]
+                nombre_nuevo = " ".join(partes[:-1])
+            else:
+                nombre_nuevo = nombre
+                apellido_nuevo = ""
+                
+            # Buscamos si existe un autor asi (case insensitive)
+            autor_existente = Autor.objects.filter(nombre__iexact=nombre_nuevo, apellido__iexact=apellido_nuevo).first()
+            
+            if autor_existente:
+                autor_final = autor_existente
+            else:
+                # CREAR NUEVO AUTOR AUTOMATICAMENTE
+                autor_final = Autor.objects.create(nombre=nombre_nuevo, apellido=apellido_nuevo)
+
+            # Crear el Libro
+            nuevo_libro = Libro(
+                titulo=titulo,
+                autor=autor_final,
+                disponible=disponible,
+                bibliografia=bibliografia,
+                isbn=isbn
+            )
+            
+            # Manejo de imagen: Prioridad al archivo subido, sino usar URL
+            if imagen:
+                nuevo_libro.imagen = imagen
+            elif cover_url and cover_url != 'None':
+                 try:
+                    import requests
+                    from django.core.files.base import ContentFile
+                    response = requests.get(cover_url)
+                    if response.status_code == 200:
+                        nuevo_libro.imagen.save(f"{isbn or titulo}.jpg", ContentFile(response.content), save=False)
+                 except Exception:
+                    pass # Si falla la imagen, guardamos el libro igual sin ella
+            
+            try:
+                nuevo_libro.save()
+                return redirect('lista_libros')
+            except Exception as e:
+                # En caso de error de BD, mostrar en el form (aunque unique=True saltaria en save())
+                pass 
+
     return render(request, 'crear_libros.html', {'autores': autores})
 #-- SECCION AUTORES --
 def lista_autores(request):
@@ -144,7 +214,7 @@ def registro(request):
 from django.views.generic import ListView , CreateView , UpdateView , DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin,  PermissionRequiredMixin
 from django.urls import reverse_lazy
-from .services import OpenLibraryClient
+from .services import ClienteOpenLibrary
 from .forms import BusquedaLibroForm
 
 #--SECCION API--
@@ -159,29 +229,29 @@ def buscar_libro_api(request):
     if request.method == 'POST':
         form = BusquedaLibroForm(request.POST)
         if form.is_valid():
-            client = OpenLibraryClient()
+            cliente = ClienteOpenLibrary()
             isbn = form.cleaned_data.get('isbn')
             termino = form.cleaned_data.get('termino')
             
             if isbn:
                 # Busqueda exacta por ISBN
-                libro_data = client.get_book_by_isbn(isbn)
+                libro_data = cliente.obtener_libro_por_isbn(isbn)
                 if libro_data:
-                    # Normalizamos un poco la estructura para el template
-                    cover_id = None
+                    # Normalizamos estructura
+                    id_portada = None
                     if 'covers' in libro_data and libro_data['covers']:
-                         cover_id = libro_data['covers'][0]
+                         id_portada = libro_data['covers'][0]
                     
                     resultado = {
                         'titulo': libro_data.get('title'),
-                        'autores': libro_data.get('authors', [{'name': 'Desconocido'}]), # La API de datos a veces devuelve objetos, a veces strings, depende del endpoint
-                        'cover_url': client.get_cover_url(cover_id, 'M'),
+                        'autores': libro_data.get('authors', [{'name': 'Desconocido'}]), 
+                        'cover_url': cliente.obtener_url_portada(id_portada, 'M'),
                         'isbn': isbn,
                         'paginas': libro_data.get('number_of_pages', 'N/A')
                     }
             elif termino:
                 # Busqueda general
-                docs = client.search_books(termino)
+                docs = cliente.buscar_libros(termino)
                 for doc in docs:
                     cover_i = doc.get('cover_i')
                     resultados_busqueda.append({
@@ -189,7 +259,7 @@ def buscar_libro_api(request):
                         'autor': doc.get('author_name', ['Desconocido'])[0],
                         'anio': doc.get('first_publish_year', 'N/A'),
                         'isbn': doc.get('isbn', [''])[0],
-                        'cover_url': client.get_cover_url(cover_i, 'S')
+                        'cover_url': cliente.obtener_url_portada(cover_i, 'S')
                     })
     else:
         form = BusquedaLibroForm()
@@ -199,6 +269,59 @@ def buscar_libro_api(request):
         'resultado': resultado,
         'resultados_busqueda': resultados_busqueda
     })
+
+@login_required
+def guardar_libro_api(request):
+    if request.method == 'POST':
+        titulo = request.POST.get('titulo')
+        nombre_autor = request.POST.get('autor')
+        isbn = request.POST.get('isbn')
+        cover_url = request.POST.get('cover_url')
+
+        if not titulo:
+             return redirect('buscar_libro_api')
+
+        # Buscar o crear autor
+        # Dividimos nombre y apellido simple
+        partes = nombre_autor.split(' ')
+        if len(partes) > 1:
+            apellido = partes[-1]
+            nombre = " ".join(partes[:-1])
+        else:
+            nombre = nombre_autor
+            apellido = ""
+            
+        autor, created = Autor.objects.get_or_create(
+            nombre__iexact=nombre, 
+            apellido__iexact=apellido,
+            defaults={'nombre': nombre, 'apellido': apellido}
+        )
+        
+        # Verificar si libro ya existe
+        if Libro.objects.filter(isbn=isbn).exists():
+             # Opcional: Avisar que ya existe
+             return redirect('lista_libros')
+
+        libro = Libro(
+            titulo=titulo,
+            autor=autor,
+            isbn=isbn,
+            disponible=True
+        )
+
+        if cover_url and cover_url != 'None':
+            try:
+                response = requests.get(cover_url)
+                if response.status_code == 200:
+                    from django.core.files.base import ContentFile
+                    libro.imagen.save(f"{isbn}.jpg", ContentFile(response.content), save=False)
+            except Exception as e:
+                print(f"Error descargando imagen: {e}")
+        
+        libro.save()
+        return redirect('lista_libros')
+    
+    return redirect('buscar_libro_api')
 
 class LibroListView(LoginRequiredMixin, ListView):
     model = Libro

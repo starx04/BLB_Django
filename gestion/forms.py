@@ -15,11 +15,11 @@ class BusquedaLibroForm(forms.Form):
     )
 
     def clean(self):
-        cleaned_data = super().clean()
-        termino = cleaned_data.get("termino")
-        isbn = cleaned_data.get("isbn")
+        datos = super().clean()
+        termino = datos.get("termino")
+        isbn = datos.get("isbn")
 
         if not termino and not isbn:
-            raise forms.ValidationError("Debe ingresar al menos un término de búsqueda o un ISBN.")
+            raise forms.ValidationError("Ingresa un término o un ISBN.")
         
-        return cleaned_data
+        return datos
