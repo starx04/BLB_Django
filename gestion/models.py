@@ -13,16 +13,35 @@ class Autor(models.Model):
     def __str__(self):
         return f"{self.nombre} {self.apellido} {self.bibliografia}"
     
+class Categoria(models.Model):
+    nombre = models.CharField(max_length=50, unique=True)
+    
+    def __str__(self):
+        return self.nombre
+
 class Libro(models.Model):
     titulo=models.CharField(max_length=50)
     autor=models.ForeignKey(Autor,related_name="Libro", on_delete= models.PROTECT)
-    disponible = models.BooleanField(default=True)
+    categorias = models.ManyToManyField(Categoria, blank=True)
+    # Stock total de copias físicas
+    stock = models.PositiveIntegerField(default=1) 
     bibliografia  = models.CharField(max_length=200, blank= True, null= True)
     isbn = models.CharField(max_length=13, blank=True, null=True, unique=True)
     imagen = models.ImageField(upload_to='libros/', blank=True, null=True)
 
     def __str__(self):
         return self.titulo
+    
+    @property
+    def disponibles(self):
+        # Calcula cuantos libros quedan en estanteria
+        # (Stock Total) - (Libros actualmente prestados y no devueltos)
+        prestados = self.Prestamos.filter(fecha_devolucion__isnull=True).count()
+        return self.stock - prestados
+
+    @property
+    def esta_disponible(self):
+        return self.disponibles > 0
     
 class Prestamos(models.Model):
     libro = models.ForeignKey(Libro, related_name="Prestamos", on_delete= models.PROTECT)

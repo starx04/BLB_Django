@@ -21,6 +21,7 @@ def lista_libros(request):
 
 def crear_libros(request):
     autores = Autor.objects.all()
+    categorias = Categoria.objects.all()
     
     if request.method == 'POST':
         # Recogemos datos del formulario
@@ -77,12 +78,19 @@ def crear_libros(request):
             nuevo_libro = Libro(
                 titulo=titulo,
                 autor=autor_final,
-                disponible=disponible,
+                stock=int(request.POST.get('stock', 1)),
+
                 bibliografia=bibliografia,
                 isbn=isbn
             )
             
-            # Manejo de imagen: Prioridad al archivo subido, sino usar URL
+            # Manejo de Categorias
+            categoria_id = request.POST.get('categoria')
+            
+            # Guardamos primero para tener ID para M2M
+            # (El resto del manejo de imagen y guardado sigue igual,
+            # solo necesitamos guardar M2M despues del save())
+
             if imagen:
                 nuevo_libro.imagen = imagen
             elif cover_url and cover_url != 'None':
@@ -97,12 +105,15 @@ def crear_libros(request):
             
             try:
                 nuevo_libro.save()
+                if categoria_id:
+                    cat = Categoria.objects.get(id=categoria_id)
+                    nuevo_libro.categorias.add(cat)
                 return redirect('lista_libros')
             except Exception as e:
                 # En caso de error de BD, mostrar en el form (aunque unique=True saltaria en save())
                 pass 
 
-    return render(request, 'crear_libros.html', {'autores': autores})
+    return render(request, 'crear_libros.html', {'autores': autores, 'categorias': categorias})
 #-- SECCION AUTORES --
 def lista_autores(request):
     autores = Autor.objects.all()
@@ -151,7 +162,7 @@ def lista_prestamos(request):
 def crear_prestamo(request):
     if not request.user.has_perm('gestion.ver_prestamos'):
         return HttpResponseForbidden()
-    libros = Libro.objects.filter(disponible=True)
+    libros = [l for l in Libro.objects.all() if l.disponibles > 0] 
     usuarios = User.objects.all()
     if request.method == 'POST':
         libro_id = request.POST.get('libro')
@@ -159,12 +170,15 @@ def crear_prestamo(request):
         fecha_prestamo = request.POST.get('fecha_prestamo')
         if libro_id and usuario_id and fecha_prestamo:
             libro = get_object_or_404(Libro, id=libro_id)
+            if libro.disponibles < 1:
+                return HttpResponseForbidden("No hay copias disponibles")
+
             usuario = get_object_or_404(User, id=usuario_id)
             prestamo = Prestamos.objects.create(libro=libro, 
                                                 usuario=usuario, 
                                                 fecha_prestamo=fecha_prestamo)
-            libro.disponible = False
-            libro.save()
+            # No necesitamos cambiar libro.disponible = False manualmente
+            # La propiedad .disponibles lo calcula solo
             return redirect('lista_prestamos')
     fecha=(timezone.now().date()).isoformat()        
     return render(request, 'crear_prestamo.html', {'libros': libros,
@@ -306,7 +320,7 @@ def guardar_libro_api(request):
             titulo=titulo,
             autor=autor,
             isbn=isbn,
-            disponible=True
+            stock=1 # Por defecto 1 al guardar desde API
         )
 
         if cover_url and cover_url != 'None':
@@ -336,7 +350,7 @@ class LibroDetailView(LoginRequiredMixin, DetailView):
 
 class LibroCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Libro
-    fields = ['titulo', 'autor', 'disponible']
+    fields = ['titulo', 'autor', 'isbn', 'stock', 'categorias', 'imagen', 'bibliografia']
     template_name = 'gestion/templates/crear_libro.html'
     success_url = reverse_lazy('libro_list')
     permission_required = 'gestion.add_libro'

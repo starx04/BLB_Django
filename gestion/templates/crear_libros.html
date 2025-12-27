@@ -56,10 +56,20 @@
         </select>
     </div>
 
-    <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-        <input type="checkbox" id="id_disponible" name="disponible" checked
-            style="width: auto; margin-right: 10px; margin-bottom: 0;">
-        <label for="id_disponible" style="margin-bottom: 0;">Disponible</label>
+    <div style="margin-bottom: 1rem;">
+        <label for="id_stock">Stock (Cantidad de Copias)</label>
+        <input type="number" id="id_stock" name="stock" value="{{ request.POST.stock|default:'1' }}" min="1" required
+            style="width: 100px;">
+    </div>
+
+    <div style="margin-bottom: 1rem;">
+        <label for="id_categoria">Categoría</label>
+        <select name="categoria" id="id_categoria">
+            <option value="">-- Sin Categoría --</option>
+            {% for cat in categorias %}
+            <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+            {% endfor %}
+        </select>
     </div>
 
     <label for="id_bibliografia">Bibliografia</label>
