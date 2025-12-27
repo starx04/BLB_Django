@@ -9,16 +9,21 @@
     <table>
         <thead>
             <tr>
+            <tr>
                 <th>Usuario</th>
+                <th>DNI</th>
+                <th>Teléfono</th>
                 <th>Email</th>
                 <th>Activo</th>
-                <th>Staff</th>
             </tr>
         </thead>
         <tbody>
             {% for usuario in usuarios %}
             <tr>
-                <td>{{ usuario.username }}</td>
+                <td><a href="{% url 'detalle_usuario' usuario.id %}" style="color: var(--neon-blue);">{{
+                        usuario.username }}</a></td>
+                <td>{{ usuario.perfil.dni|default:"-" }}</td>
+                <td>{{ usuario.perfil.telefono|default:"-" }}</td>
                 <td>{{ usuario.email|default:"-" }}</td>
                 <td>
                     {% if usuario.is_active %}

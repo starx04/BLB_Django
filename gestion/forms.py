@@ -23,3 +23,29 @@ class BusquedaLibroForm(forms.Form):
             raise forms.ValidationError("Ingresa un término o un ISBN.")
         
         return datos
+
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from .models import PerfilUsuario
+
+class RegistroExtendidoForm(UserCreationForm):
+    dni = forms.CharField(max_length=20, required=True, label="DNI / Identificación")
+    direccion = forms.CharField(max_length=200, required=False, label="Dirección")
+    telefono = forms.CharField(max_length=20, required=False, label="Teléfono")
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = UserCreationForm.Meta.fields + ('email',)
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if commit:
+            user.save()
+            # El perfil se crea por la señal post_save, ahora lo actualizamos
+            if hasattr(user, 'perfil'):
+                perfil = user.perfil
+                perfil.dni = self.cleaned_data['dni']
+                perfil.direccion = self.cleaned_data['direccion']
+                perfil.telefono = self.cleaned_data['telefono']
+                perfil.save()
+        return user

@@ -1,0 +1,64 @@
+{% extends "index.html" %}
+
+{% block contenido %}
+<div class="section-header">
+    <h2>Perfil de Usuario: {{ usuario.username }}</h2>
+</div>
+
+<div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+    <!-- Tarjeta de Información Personal -->
+    <div class="card" style="flex: 1; min-width: 300px; padding: 1.5rem; border: 1px solid #333; border-radius: 8px;">
+        <h3>Datos Personales</h3>
+        <p><strong>DNI:</strong> {{ usuario.perfil.dni|default:"No registrado" }}</p>
+        <p><strong>Email:</strong> {{ usuario.email|default:"No registrado" }}</p>
+        <p><strong>Teléfono:</strong> {{ usuario.perfil.telefono|default:"No registrado" }}</p>
+        <p><strong>Dirección:</strong> {{ usuario.perfil.direccion|default:"No registrado" }}</p>
+        <p><strong>Fecha Registro:</strong> {{ usuario.date_joined|date:"d M Y" }}</p>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="card" style="flex: 1; min-width: 300px; padding: 1.5rem; border: 1px solid #333; border-radius: 8px;">
+        <h3>Estadísticas</h3>
+        <!-- Usamos length para contar, si el usuario tiene muchos prestamos podria ser lento, pero ok para v1 -->
+        <p><strong>Libros Prestados (Total):</strong> {{ prestamos.count }}</p>
+        <p><strong>Libros Pendientes:</strong> {{ pendientes_count }}</p>
+    </div>
+</div>
+
+<section style="margin-top: 2rem;">
+    <h3>Historial de Lectura</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Libro</th>
+                <th>Fecha Préstamo</th>
+                <th>Devolución</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in prestamos %}
+            <tr>
+                <td>{{ p.libro.titulo }}</td>
+                <td>{{ p.fecha|date:"d/m/Y" }}</td>
+                <td>{{ p.fecha_devolucion|date:"d/m/Y"|default:"-" }}</td>
+                <td>
+                    {% if p.estado == 'activo' %}
+                    <span style="color: yellow;">Leyendo</span>
+                    {% elif p.estado == 'vencido' %}
+                    <span style="color: red;">Vencido</span>
+                    {% else %}
+                    <span style="color: #0f0;">Devuelto</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">No tiene historial de préstamos.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% endblock %}

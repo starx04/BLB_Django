@@ -13,6 +13,8 @@ urlpatterns = [
     path('libros/<int:pk>/', LibroDetailView.as_view(), name="libro_detail"),
 
     #Gestion Usuarios
+    path('usuarios/', lista_usuarios, name="lista_usuarios"),
+    path('usuarios/<int:id>/', detalle_usuario, name="detalle_usuario"),
     path('login/',auth_views.LoginView.as_view(),name="login"),
     path('logout/',auth_views.LogoutView.as_view(next_page="login"),name="logout"),
 

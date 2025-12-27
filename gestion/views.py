@@ -218,13 +218,25 @@ def lista_usuarios(request):
 
 def crear_usuario(request):
     pass
-def detalle_usuario(request):
-    pass
+def detalle_usuario(request, id):
+    usuario = get_object_or_404(User, id=id)
+    prestamos = Prestamos.objects.filter(usuario=usuario).order_by('-fecha')
+    
+    # Contamos cuantos no han sido devueltos (no tienen fecha de devolucion)
+    pendientes = prestamos.filter(fecha_devolucion__isnull=True).count()
+    
+    return render(request, 'detalle_usuario.html', {
+        'usuario': usuario,
+        'prestamos': prestamos,
+        'pendientes_count': pendientes
+    })
+
+from .forms import BusquedaLibroForm, RegistroExtendidoForm
 
 #--SECCION REGISTRO--
 def registro(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = RegistroExtendidoForm(request.POST) # Formulario extendido
         if form.is_valid():
             usuario = form.save()
             try:
@@ -235,7 +247,7 @@ def registro(request):
             login(request, usuario)
             return redirect('index')
     else:
-        form = UserCreationForm()
+        form = RegistroExtendidoForm()
     return render(request, 'registration/registro.html', {'form': form})
 
 #create your views here

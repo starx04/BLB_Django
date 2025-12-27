@@ -105,4 +105,30 @@ class Multa(models.Model):
     def save(self, *args, **kwargs):
         if self.tipo ==  'r' and  self.monto ==0 :
             self.monto = self.prestamo.multa_retraso
-        super().save(*args ,**kwargs) #Llama a la funcion principal de djnago 
+        super().save(*args ,**kwargs) 
+
+# Extension del Usuario Django
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+class PerfilUsuario(models.Model):
+    usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='perfil')
+    dni = models.CharField(max_length=20, blank=True, null=True, unique=True)
+    direccion = models.CharField(max_length=200, blank=True, null=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+
+    def __str__(self):
+        return f"Perfil de {self.usuario.username}"
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def crear_perfil_usuario(sender, instance, created, **kwargs):
+    if created:
+        PerfilUsuario.objects.create(usuario=instance)
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def guardar_perfil_usuario(sender, instance, **kwargs):
+    try:
+        instance.perfil.save()
+    except PerfilUsuario.DoesNotExist:
+        # En caso de usuarios antiguos sin perfil
+        PerfilUsuario.objects.create(usuario=instance) 
