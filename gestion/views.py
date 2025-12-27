@@ -185,6 +185,20 @@ def crear_prestamo(request):
                                                                     'usuarios': usuarios,
                                                                     'fecha': fecha})
 
+@login_required
+def finalizar_prestamo(request, id):
+    prestamo = get_object_or_404(Prestamos, id=id)
+    if request.method == 'POST':
+        prestamo.finalizar()
+    return redirect('lista_prestamos')
+
+@login_required
+def renovar_prestamo(request, id):
+    prestamo = get_object_or_404(Prestamos, id=id)
+    if request.method == 'POST':
+        prestamo.renovar()
+    return redirect('lista_prestamos')
+
 def detalle_prestamo(request):
     pass
 

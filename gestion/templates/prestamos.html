@@ -14,8 +14,10 @@
                 <th>Fecha Préstamo</th>
                 <th>Fecha Máx</th>
                 <th>Devolución</th>
+                <th>Estado</th>
                 <th>Días Retraso</th>
                 <th>Multa</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -25,9 +27,28 @@
                 <td>{{ prestamo.usuario }}</td>
                 <td>{{ prestamo.fecha }}</td>
                 <td>{{ prestamo.fecha_max|default_if_none:"-" }}</td>
-                <td>{{ prestamo.fecha_devolucion|default_if_none:"-" }}</td>
+                <td>{{ prestamo.fecha_devolucion|default_if_none:"Pending" }}</td>
+                <td>{{ prestamo.get_estado_display }}</td>
                 <td>{{ prestamo.dias_retraso|default_if_none:"0" }}</td>
                 <td>{{ prestamo.multa_retraso|default_if_none:"-" }}</td>
+                <td>
+                    {% if prestamo.estado == 'activo' %}
+                    <div style="display: flex; gap: 5px;">
+                        <form action="{% url 'finalizar_prestamo' prestamo.id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit"
+                                style="background: var(--neon-blue); font-size: 0.8em; padding: 5px;">Devolver</button>
+                        </form>
+                        {% if prestamo.renovaciones < 3 %} <form action="{% url 'renovar_prestamo' prestamo.id %}"
+                            method="post">
+                            {% csrf_token %}
+                            <button type="submit"
+                                style="background: orange; font-size: 0.8em; padding: 5px;">Renovar</button>
+                            </form>
+                            {% endif %}
+                    </div>
+                    {% endif %}
+                </td>
             </tr>
             {% empty %}
             <tr>

@@ -50,6 +50,9 @@ class Prestamos(models.Model):
     fecha_max = models.DateField()
     fecha_devolucion = models.DateField(blank=True, null=True) #Permite a django grabar en blanco y en nulo
     
+    estado = models.CharField(max_length=20, choices=(('activo','Activo'), ('finalizado','Finalizado'), ('vencido','Vencido')), default='activo')
+    renovaciones = models.PositiveIntegerField(default=0)
+    
     class Meta:
         permissions = (
             ("ver_prestamos", "Puede Ver Prestamos"),
@@ -60,14 +63,30 @@ class Prestamos(models.Model):
     def __str__(self):
         return f"Prestamo de {self.libro} a {self.usuario}"
     
+    def finalizar(self):
+        if not self.fecha_devolucion:
+            self.fecha_devolucion = timezone.now().date()
+            self.estado = 'finalizado'
+            self.save()
+
+    def renovar(self, dias=7):
+        if self.estado == 'activo' and self.renovaciones < 3:
+            self.fecha_max += timezone.timedelta(days=dias)
+            self.renovaciones += 1
+            self.save()
+            return True
+        return False
+
     @property #Sirve similiar al compute de odoo
     def dias_retraso(self):
-        hoy = timezone.now().date()
-        fecha_ref =  self.fecha_devolucion or hoy
-        if  fecha_ref > self.fecha_max:
-            return (fecha_ref + self.fecha_devolucion).days
+        if self.estado == 'finalizado':
+            fecha_ref = self.fecha_devolucion
         else:
-            return 0
+            fecha_ref = timezone.now().date()
+            
+        if fecha_ref > self.fecha_max:
+             return (fecha_ref - self.fecha_max).days
+        return 0
     @property
     def multa_retraso(self):
         tarifa = 0.50
@@ -76,7 +95,7 @@ class Prestamos(models.Model):
 class Multa(models.Model):
     prestamo =  models.ForeignKey(Prestamos, related_name="Multa", on_delete= models.PROTECT)
     tipo = models.CharField(max_length=10, choices=(('r','retraso'), ('p','perdida'), ('d', 'deterioro')))
-    monto = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    monto = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     pagada  = models.BooleanField(default=False)
     fecha  =  models.DateField(default=timezone.now)
         
