@@ -8,9 +8,14 @@ class ClienteOpenLibrary:
     
     URL_BASE = "https://openlibrary.org"
     URL_PORTADAS = "https://covers.openlibrary.org/b/id"
+    URL_PORTADAS_ISBN = "https://covers.openlibrary.org/b/isbn"
 
     def __init__(self):
         self.sesion = requests.Session()
+        # Header recomendado por OpenLibrary para buenas prácticas
+        self.sesion.headers.update({
+            'User-Agent': 'GestionBiblioteca/1.0 (contacto@biblioteca.local)'
+        })
 
     def obtener_libro_por_isbn(self, isbn):
         """Obtiene detalles de un libro por su ISBN."""
@@ -18,7 +23,7 @@ class ClienteOpenLibrary:
         params = {
             'bibkeys': f'ISBN:{isbn}',
             'format': 'json',
-            'jscmd': 'data'
+            'jscmd': 'data' # data nos incluye datos de autores y portadas
         }
 
         try:
@@ -44,7 +49,13 @@ class ClienteOpenLibrary:
             return []
 
     def obtener_url_portada(self, id_portada, tamano='M'):
-        """Genera la URL de la portada."""
+        """Genera la URL de la portada usando el ID."""
         if not id_portada:
             return None
         return f"{self.URL_PORTADAS}/{id_portada}-{tamano}.jpg"
+
+    def obtener_url_portada_isbn(self, isbn, tamano='M'):
+        """Genera la URL de la portada usando el ISBN."""
+        if not isbn:
+            return None
+        return f"{self.URL_PORTADAS_ISBN}/{isbn}-{tamano}.jpg"

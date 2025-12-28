@@ -278,14 +278,18 @@ def buscar_libro_api(request):
                 libro_data = cliente.obtener_libro_por_isbn(isbn)
                 if libro_data:
                     # Normalizamos estructura
-                    id_portada = None
+                    cover_url = None
                     if 'covers' in libro_data and libro_data['covers']:
                          id_portada = libro_data['covers'][0]
+                         cover_url = cliente.obtener_url_portada(id_portada, 'M')
                     
+                    if not cover_url:
+                        cover_url = cliente.obtener_url_portada_isbn(isbn, 'M')
+
                     resultado = {
                         'titulo': libro_data.get('title'),
                         'autores': libro_data.get('authors', [{'name': 'Desconocido'}]), 
-                        'cover_url': cliente.obtener_url_portada(id_portada, 'M'),
+                        'cover_url': cover_url,
                         'isbn': isbn,
                         'paginas': libro_data.get('number_of_pages', 'N/A')
                     }
