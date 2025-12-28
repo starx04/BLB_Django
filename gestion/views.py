@@ -174,6 +174,17 @@ def crear_prestamo(request):
                 return HttpResponseForbidden("No hay copias disponibles")
 
             usuario = get_object_or_404(User, id=usuario_id)
+            
+            # BLOQUEO MOROSOS
+            # 1. Chequear multas impagas indirectamente a traves de sus prestamos
+            prestamos_usuario = Prestamos.objects.filter(usuario=usuario)
+            tiene_multas = Multa.objects.filter(prestamo__in=prestamos_usuario, pagada=False).exists()
+            
+            # 2. Chequear prestamos vencidos
+            tiene_vencidos = prestamos_usuario.filter(estado='vencido').exists()
+            
+            if tiene_multas or tiene_vencidos:
+                 return HttpResponseForbidden(f"El usuario {usuario.username} tiene multas pendientes o libros vencidos. No se puede realizar el prestamo.")
             prestamo = Prestamos.objects.create(libro=libro, 
                                                 usuario=usuario, 
                                                 fecha_prestamo=fecha_prestamo)
