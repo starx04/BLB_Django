@@ -15,10 +15,12 @@ def index(request):
     title = settings.TITLE
     return render(request, 'home.html', {'titulo': title, "t": titulo2})
 #-- SECCION LIBROS --
+@login_required
 def lista_libros(request):
     libros = Libro.objects.all()
     return render(request, 'libros.html', {'libros': libros})
 
+@login_required
 def crear_libros(request):
     autores = Autor.objects.all()
     categorias = Categoria.objects.all()
@@ -115,6 +117,7 @@ def crear_libros(request):
 
     return render(request, 'crear_libros.html', {'autores': autores, 'categorias': categorias})
 #-- SECCION AUTORES --
+@login_required
 def lista_autores(request):
     autores = Autor.objects.all()
     return render(request, 'autores.html', {'autores': autores})
@@ -154,6 +157,7 @@ def crear_autor(request,id=None):
     return render(request, 'crear_autor.html', context)
     
 #--SECCION PRESTAMOS--
+@login_required
 def lista_prestamos(request):
     prestamos = Prestamos.objects.all()
     return render(request, 'prestamos.html', {'prestamos': prestamos})
@@ -210,25 +214,32 @@ def renovar_prestamo(request, id):
         prestamo.renovar()
     return redirect('lista_prestamos')
 
+@login_required
 def detalle_prestamo(request):
     pass
 
 #--SECCION MULTAS--
+@login_required
 def lista_multas(request):
     multas = Multa.objects.all()
     return render(request, 'multas.html', {'multas': multas})
 
+@login_required
 def crear_multa(request):
     pass
+@login_required
 def detalle_multa(request):
     pass
 #--SECCION USUARIOS--
+@login_required
 def lista_usuarios(request):
     usuarios = User.objects.all()
     return render(request, 'usuarios.html', {'usuarios': usuarios})
 
+@login_required
 def crear_usuario(request):
     pass
+@login_required
 def detalle_usuario(request, id):
     usuario = get_object_or_404(User, id=id)
     prestamos = Prestamos.objects.filter(usuario=usuario).order_by('-fecha')

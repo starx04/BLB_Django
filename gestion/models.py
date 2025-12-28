@@ -132,3 +132,12 @@ def guardar_perfil_usuario(sender, instance, **kwargs):
     except PerfilUsuario.DoesNotExist:
         # En caso de usuarios antiguos sin perfil
         PerfilUsuario.objects.create(usuario=instance) 
+
+class Gasto(models.Model):
+    concepto = models.CharField(max_length=100)
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha = models.DateField(default=timezone.now)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return f"{self.concepto} - ${self.monto}" 
