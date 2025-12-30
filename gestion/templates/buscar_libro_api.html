@@ -9,13 +9,13 @@
     <form method="post">
         {% csrf_token %}
         <div style="margin-bottom: 1rem;">
-            {{ form.termino.label_tag }}
-            {{ form.termino }}
+            {{ form.termino_busqueda.label_tag }}
+            {{ form.termino_busqueda }}
         </div>
         <div style="text-align: center; margin: 0.5rem;"> - O - </div>
         <div style="margin-bottom: 1rem;">
-            {{ form.isbn.label_tag }}
-            {{ form.isbn }}
+            {{ form.codigo_isbn.label_tag }}
+            {{ form.codigo_isbn }}
         </div>
         <button type="submit">Buscar</button>
     </form>

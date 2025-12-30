@@ -253,12 +253,12 @@ def detalle_usuario(request, id):
         'pendientes_count': pendientes
     })
 
-from .forms import BusquedaLibroForm, RegistroExtendidoForm
+from .forms import FormularioBusquedaLibro, FormularioRegistroExtendido
 
 #--SECCION REGISTRO--
 def registro(request):
     if request.method == 'POST':
-        form = RegistroExtendidoForm(request.POST) # Formulario extendido
+        form = FormularioRegistroExtendido(request.POST) # Formulario extendido
         if form.is_valid():
             usuario = form.save()
             try:
@@ -269,7 +269,7 @@ def registro(request):
             login(request, usuario)
             return redirect('index')
     else:
-        form = RegistroExtendidoForm()
+        form = FormularioRegistroExtendido()
     return render(request, 'registration/registro.html', {'form': form})
 
 #create your views here
@@ -277,7 +277,7 @@ from django.views.generic import ListView , CreateView , UpdateView , DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin,  PermissionRequiredMixin
 from django.urls import reverse_lazy
 from .services import ClienteOpenLibrary
-from .forms import BusquedaLibroForm
+from .forms import FormularioBusquedaLibro
 
 #--SECCION API--
 @login_required
@@ -289,11 +289,11 @@ def buscar_libro_api(request):
     resultados_busqueda = []
     
     if request.method == 'POST':
-        form = BusquedaLibroForm(request.POST)
+        form = FormularioBusquedaLibro(request.POST)
         if form.is_valid():
             cliente = ClienteOpenLibrary()
-            isbn = form.cleaned_data.get('isbn')
-            termino = form.cleaned_data.get('termino')
+            isbn = form.cleaned_data.get('codigo_isbn')
+            termino = form.cleaned_data.get('termino_busqueda')
             
             if isbn:
                 # Busqueda exacta por ISBN
@@ -328,7 +328,7 @@ def buscar_libro_api(request):
                         'cover_url': cliente.obtener_url_portada(cover_i, 'S')
                     })
     else:
-        form = BusquedaLibroForm()
+        form = FormularioBusquedaLibro()
 
     return render(request, 'gestion/templates/buscar_libro_api.html', {
         'form': form,
