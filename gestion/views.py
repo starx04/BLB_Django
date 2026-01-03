@@ -16,7 +16,7 @@ def index(request):
     
     # KPIs del Dashboard
     total_libros = Libro.objects.count()
-    prestamos_activos = Prestamos.objects.filter(estado='activo').count()
+    prestamos_activos = Prestamos.objects.filter(estado='prestado').count()
     multas_pendientes = Multa.objects.filter(pagada=False).aggregate(total=Sum('monto'))['total'] or 0
     usuarios_registrados = User.objects.count()
     
@@ -201,14 +201,18 @@ def crear_prestamo(request):
             prestamos_usuario = Prestamos.objects.filter(usuario=usuario)
             tiene_multas = Multa.objects.filter(prestamo__in=prestamos_usuario, pagada=False).exists()
             
-            # 2. Chequear prestamos vencidos
-            tiene_vencidos = prestamos_usuario.filter(estado='vencido').exists()
+            # 2. Chequear prestamos vencidos (ahora 'multado')
+            tiene_vencidos = prestamos_usuario.filter(estado='multado').exists()
             
             if tiene_multas or tiene_vencidos:
                  return HttpResponseForbidden(f"El usuario {usuario.username} tiene multas pendientes o libros vencidos. No se puede realizar el prestamo.")
+            
+            # Al crear desde el form, lo asumimos confirmado ('prestado')
+            # Si se quisiera borrador, se usaria confirmar() despues.
             prestamo = Prestamos.objects.create(libro=libro, 
                                                 usuario=usuario, 
-                                                fecha_prestamo=fecha_prestamo)
+                                                fecha_prestamo=fecha_prestamo,
+                                                estado='prestado')
             # No necesitamos cambiar libro.disponible = False manualmente
             # La propiedad .disponibles lo calcula solo
             return redirect('lista_prestamos')

@@ -43,14 +43,27 @@ class Libro(models.Model):
     def esta_disponible(self):
         return self.disponibles > 0
     
+import uuid
+
+def generar_codigo_unico(prefix):
+    """Genera un código único corto con un prefijo dado."""
+    return f"{prefix}-{str(uuid.uuid4())[:8].upper()}"
+
 class Prestamos(models.Model):
+    codigo = models.CharField(max_length=20, unique=True, editable=False, null=True) # null=True temporalmente para evitar error en migracion directa
     libro = models.ForeignKey(Libro, related_name="Prestamos", on_delete= models.PROTECT)
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="Prestamos" , on_delete= models.PROTECT)
     fecha = models.DateField(default=timezone.now)
     fecha_max = models.DateField()
     fecha_devolucion = models.DateField(blank=True, null=True) #Permite a django grabar en blanco y en nulo
     
-    estado = models.CharField(max_length=20, choices=(('activo','Activo'), ('finalizado','Finalizado'), ('vencido','Vencido')), default='activo')
+    ESTADOS = (
+        ('borrador', 'Borrador'),
+        ('prestado', 'Prestado'),
+        ('devuelto', 'Devuelto'),
+        ('multado', 'Multado')
+    )
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='borrador')
     renovaciones = models.PositiveIntegerField(default=0)
     
     class Meta:
@@ -61,24 +74,35 @@ class Prestamos(models.Model):
 
 
     def __str__(self):
-        return f"Prestamo de {self.libro} a {self.usuario}"
+        return f"Prestamo {self.codigo} ({self.estado}) - {self.libro} a {self.usuario}"
     
+    def save(self, *args, **kwargs):
+        if not self.codigo:
+            self.codigo = generar_codigo_unico("PRES")
+        super().save(*args, **kwargs)
+
+    def confirmar(self):
+        """Confirma un borrador y activa el préstamo."""
+        if self.estado == 'borrador':
+            self.estado = 'prestado'
+            self.fecha = timezone.now().date()
+            # Si no se definió fecha_max manual, la definimos aquí (ej. 14 días)
+            if not self.fecha_max:
+                self.fecha_max = self.fecha + timezone.timedelta(days=14)
+            self.save()
+
     def finalizar(self):
         if not self.fecha_devolucion:
             self.fecha_devolucion = timezone.now().date()
-            self.estado = 'finalizado'
+            self.estado = 'devuelto'
             self.save()
             
             # Generar multa automática si hubo retraso
             if self.dias_retraso > 0:
-                # Usamos el related_name "Multa" para crear la multa desde aquí
-                # No hace falta pasar monto si la lógica de Multa.save() lo calcula,
-                # pero pasarlo es más explícito si ya se tiene.
-                # Dejemos que Multa.save lo calcule:
                 self.Multa.create(tipo='r')
 
     def renovar(self, dias=7):
-        if self.estado == 'activo' and self.renovaciones < 3:
+        if self.estado == 'prestado' and self.renovaciones < 3:
             self.fecha_max += timezone.timedelta(days=dias)
             self.renovaciones += 1
             self.save()
@@ -87,15 +111,15 @@ class Prestamos(models.Model):
 
     def comprobar_vencimiento(self):
         """Verifica si el préstamo ha vencido y actualiza el estado."""
-        if self.estado == 'activo' and self.fecha_max < timezone.now().date():
-            self.estado = 'vencido'
+        if self.estado == 'prestado' and self.fecha_max < timezone.now().date():
+            self.estado = 'multado'
             self.save()
             return True
         return False
 
     @property #Sirve similiar al compute de odoo
     def dias_retraso(self):
-        if self.estado == 'finalizado':
+        if self.estado == 'devuelto':
             fecha_ref = self.fecha_devolucion
         else:
             fecha_ref = timezone.now().date()
@@ -109,6 +133,7 @@ class Prestamos(models.Model):
         return self.dias_retraso * tarifa
     
 class Multa(models.Model):
+    codigo = models.CharField(max_length=20, unique=True, editable=False, null=True)
     prestamo =  models.ForeignKey(Prestamos, related_name="Multa", on_delete= models.PROTECT)
     tipo = models.CharField(max_length=10, choices=(('r','retraso'), ('p','perdida'), ('d', 'deterioro')))
     monto = models.DecimalField(max_digits=5, decimal_places=2, default=0)
@@ -116,9 +141,11 @@ class Multa(models.Model):
     fecha  =  models.DateField(default=timezone.now)
         
     def __str__(self):
-        return f"Multa {self.tipo} - {self.monto} - {self.prestamo}"
+        return f"Multa {self.codigo} ({self.tipo}) - {self.monto}"
         
     def save(self, *args, **kwargs):
+        if not self.codigo:
+            self.codigo = generar_codigo_unico("MULT")
         if self.tipo ==  'r' and  self.monto ==0 :
             self.monto = self.prestamo.multa_retraso
         super().save(*args, **kwargs) 
@@ -129,12 +156,19 @@ from django.dispatch import receiver
 
 class PerfilUsuario(models.Model):
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='perfil')
+    codigo_socio = models.CharField(max_length=20, unique=True, editable=False, null=True)
     dni = models.CharField(max_length=20, blank=True, null=True, unique=True)
     direccion = models.CharField(max_length=200, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
 
+    def save(self, *args, **kwargs):
+        if not self.codigo_socio:
+            self.codigo_socio = generar_codigo_unico("SOC")
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"Perfil de {self.usuario.username}"
+        return f"Perfil {self.codigo_socio} - {self.usuario.username}"
+
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def crear_perfil_usuario(sender, instance, created, **kwargs):
