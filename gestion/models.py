@@ -91,13 +91,26 @@ class Prestamos(models.Model):
                 self.fecha_max = self.fecha + timezone.timedelta(days=7)
             self.save()
 
-    def finalizar(self):
+    def finalizar(self, tipo_multa=None, monto_multa=0):
+        """
+        ACCIÓN: Finalizar / Devolver
+        ----------------------------
+        Marca el libro como devuelto ('devuelto').
+        Registra la fecha de hoy como fecha de devolución.
+        Calcula si hubo retraso y genera una multa automáticamente si es necesario.
+        Si se especifica un tipo de multa manual (daño/pérdida), la crea.
+        """
         if not self.fecha_devolucion:
             self.fecha_devolucion = timezone.now().date()
             self.estado = 'devuelto'
             self.save()
             
-            # Generar multa automática si hubo retraso
+            # 1. Multa por DAÑO o PÉRDIDA (Manual)
+            if tipo_multa and tipo_multa in ['d', 'p']:
+                self.Multa.create(tipo=tipo_multa, monto=monto_multa)
+            
+            # 2. Multa por RETRASO (Automática)
+            # Se genera siempre si hay días de retraso, independientemente de si hubo daño.
             if self.dias_retraso > 0:
                 self.Multa.create(tipo='r')
 

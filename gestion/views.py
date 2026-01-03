@@ -231,7 +231,11 @@ def crear_prestamo(request):
 def finalizar_prestamo(request, id):
     prestamo = get_object_or_404(Prestamos, id=id)
     if request.method == 'POST':
-        prestamo.finalizar()
+        # Capturamos datos del formulario de devolución
+        tipo_dano = request.POST.get('tipo_dano') # 'd' o 'p' o vacio
+        monto_dano = request.POST.get('monto_dano', 0)
+        
+        prestamo.finalizar(tipo_multa=tipo_dano, monto_multa=monto_dano)
     return redirect('lista_prestamos')
 
 @login_required
