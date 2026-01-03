@@ -86,9 +86,9 @@ class Prestamos(models.Model):
         if self.estado == 'borrador':
             self.estado = 'prestado'
             self.fecha = timezone.now().date()
-            # Si no se definió fecha_max manual, la definimos aquí (ej. 14 días)
+            # Plazo fijo de 7 días (1 semana) desde la fecha de préstamo
             if not self.fecha_max:
-                self.fecha_max = self.fecha + timezone.timedelta(days=14)
+                self.fecha_max = self.fecha + timezone.timedelta(days=7)
             self.save()
 
     def finalizar(self):

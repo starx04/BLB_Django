@@ -32,7 +32,7 @@
                 <td>{{ prestamo.dias_retraso|default_if_none:"0" }}</td>
                 <td>{{ prestamo.multa_retraso|default_if_none:"-" }}</td>
                 <td>
-                    {% if prestamo.estado == 'activo' %}
+                    {% if prestamo.estado == 'prestado' %}
                     <div style="display: flex; gap: 5px;">
                         <form action="{% url 'finalizar_prestamo' prestamo.id %}" method="post">
                             {% csrf_token %}

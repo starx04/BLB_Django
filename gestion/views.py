@@ -188,8 +188,13 @@ def crear_prestamo(request):
     if request.method == 'POST':
         libro_id = request.POST.get('libro')
         usuario_id = request.POST.get('usuario')
-        fecha_prestamo = request.POST.get('fecha_prestamo')
-        if libro_id and usuario_id and fecha_prestamo:
+        fecha_str = request.POST.get('fecha_prestamo') # Fecha de inicio elegida
+        
+        if libro_id and usuario_id and fecha_str:
+            from datetime import datetime
+            fecha_prestamo = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+            # Calculo automático: 7 días después de la fecha de inicio
+            fecha_max_calc = fecha_prestamo + timezone.timedelta(days=7)
             libro = get_object_or_404(Libro, id=libro_id)
             if libro.disponibles < 1:
                 return HttpResponseForbidden("No hay copias disponibles")
@@ -211,7 +216,8 @@ def crear_prestamo(request):
             # Si se quisiera borrador, se usaria confirmar() despues.
             prestamo = Prestamos.objects.create(libro=libro, 
                                                 usuario=usuario, 
-                                                fecha_prestamo=fecha_prestamo,
+                                                fecha=fecha_prestamo,        # Usamos el campo 'fecha' del modelo (inicio)
+                                                fecha_max=fecha_max_calc,    # Plazo autom de 7 dias
                                                 estado='prestado')
             # No necesitamos cambiar libro.disponible = False manualmente
             # La propiedad .disponibles lo calcula solo

@@ -129,3 +129,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = 'index'
 LOGIN_URL = 'login'
+
+# --- CONFIGURACION DE CORREO ELECTRONICO ---
+# Para pruebas locales (Imprime en consola)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Para Producción (Gmail Ejemplo) - Descomentar y llenar datos
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'tu_correo@gmail.com'
+# EMAIL_HOST_PASSWORD = 'tu_contraseña_aplicacion' 
+DEFAULT_FROM_EMAIL = 'Biblioteca Local <noreply@biblioteca.local>'
