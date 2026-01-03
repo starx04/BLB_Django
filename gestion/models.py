@@ -68,11 +68,27 @@ class Prestamos(models.Model):
             self.fecha_devolucion = timezone.now().date()
             self.estado = 'finalizado'
             self.save()
+            
+            # Generar multa automática si hubo retraso
+            if self.dias_retraso > 0:
+                # Usamos el related_name "Multa" para crear la multa desde aquí
+                # No hace falta pasar monto si la lógica de Multa.save() lo calcula,
+                # pero pasarlo es más explícito si ya se tiene.
+                # Dejemos que Multa.save lo calcule:
+                self.Multa.create(tipo='r')
 
     def renovar(self, dias=7):
         if self.estado == 'activo' and self.renovaciones < 3:
             self.fecha_max += timezone.timedelta(days=dias)
             self.renovaciones += 1
+            self.save()
+            return True
+        return False
+
+    def comprobar_vencimiento(self):
+        """Verifica si el préstamo ha vencido y actualiza el estado."""
+        if self.estado == 'activo' and self.fecha_max < timezone.now().date():
+            self.estado = 'vencido'
             self.save()
             return True
         return False
