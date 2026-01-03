@@ -5,7 +5,7 @@ from django.contrib.auth.models import User, Permission
 from django.utils import timezone
 from django.conf import settings 
 from django.http import HttpResponseForbidden
-from django.contrib.auth.forms import UserCreationForm
+from django.core.files.base import ContentFile
 from django.contrib.auth import login
 
 from .models import Libro, Prestamos, Multa, Autor
@@ -97,8 +97,6 @@ def crear_libros(request):
                 nuevo_libro.imagen = imagen
             elif cover_url and cover_url != 'None':
                  try:
-                    import requests
-                    from django.core.files.base import ContentFile
                     response = requests.get(cover_url)
                     if response.status_code == 200:
                         nuevo_libro.imagen.save(f"{isbn or titulo}.jpg", ContentFile(response.content), save=False)
@@ -214,9 +212,7 @@ def renovar_prestamo(request, id):
         prestamo.renovar()
     return redirect('lista_prestamos')
 
-@login_required
-def detalle_prestamo(request):
-    pass
+
 
 #--SECCION MULTAS--
 @login_required
@@ -224,21 +220,14 @@ def lista_multas(request):
     multas = Multa.objects.all()
     return render(request, 'multas.html', {'multas': multas})
 
-@login_required
-def crear_multa(request):
-    pass
-@login_required
-def detalle_multa(request):
-    pass
+
 #--SECCION USUARIOS--
 @login_required
 def lista_usuarios(request):
     usuarios = User.objects.all()
     return render(request, 'usuarios.html', {'usuarios': usuarios})
 
-@login_required
-def crear_usuario(request):
-    pass
+
 @login_required
 def detalle_usuario(request, id):
     usuario = get_object_or_404(User, id=id)
@@ -277,7 +266,7 @@ from django.views.generic import ListView , CreateView , UpdateView , DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin,  PermissionRequiredMixin
 from django.urls import reverse_lazy
 from .services import ClienteOpenLibrary
-from .forms import FormularioBusquedaLibro
+
 
 #--SECCION API--
 @login_required
@@ -379,7 +368,6 @@ def guardar_libro_api(request):
             try:
                 response = requests.get(cover_url)
                 if response.status_code == 200:
-                    from django.core.files.base import ContentFile
                     libro.imagen.save(f"{isbn}.jpg", ContentFile(response.content), save=False)
             except Exception as e:
                 print(f"Error descargando imagen: {e}")

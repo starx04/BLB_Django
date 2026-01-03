@@ -105,7 +105,7 @@ class Multa(models.Model):
     def save(self, *args, **kwargs):
         if self.tipo ==  'r' and  self.monto ==0 :
             self.monto = self.prestamo.multa_retraso
-        super().save(*args ,**kwargs) 
+        super().save(*args, **kwargs) 
 
 # Extension del Usuario Django
 from django.db.models.signals import post_save
