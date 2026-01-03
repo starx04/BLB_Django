@@ -7,13 +7,32 @@ from django.conf import settings
 from django.http import HttpResponseForbidden
 from django.core.files.base import ContentFile
 from django.contrib.auth import login
+from django.db.models import Sum
 
 from .models import Libro, Prestamos, Multa, Autor
 
 def index(request):
-    titulo2 = "Hola Mundo"
     title = settings.TITLE
-    return render(request, 'home.html', {'titulo': title, "t": titulo2})
+    
+    # KPIs del Dashboard
+    total_libros = Libro.objects.count()
+    prestamos_activos = Prestamos.objects.filter(estado='activo').count()
+    multas_pendientes = Multa.objects.filter(pagada=False).aggregate(total=Sum('monto'))['total'] or 0
+    usuarios_registrados = User.objects.count()
+    
+    # Datos para tabla de recientes (Últimos 5 libros agregados)
+    # Asumimos que ID más alto es más reciente ya que no tenemos 'created_at'
+    libros_recientes = Libro.objects.order_by('-id')[:5]
+
+    context = {
+        'titulo': title,
+        'total_libros': total_libros,
+        'prestamos_activos': prestamos_activos,
+        'multas_pendientes': multas_pendientes,
+        'usuarios_registrados': usuarios_registrados,
+        'libros_recientes': libros_recientes
+    }
+    return render(request, 'home.html', context)
 #-- SECCION LIBROS --
 @login_required
 def lista_libros(request):

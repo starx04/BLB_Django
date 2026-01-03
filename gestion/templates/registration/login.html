@@ -15,5 +15,10 @@
     <input type="password" id="id_password" name="password" required>
 
     <button type="submit">Iniciar Sesión</button>
+
+    <div style="margin-top: 1rem; text-align: center;">
+        <p>¿No tienes una cuenta? <a href="{% url 'registro' %}"
+                style="color: var(--neon-blue); text-decoration: none;">Regístrate aquí</a></p>
+    </div>
 </form>
 {% endblock %}

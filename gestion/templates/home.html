@@ -12,19 +12,19 @@
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-title">Total Libros</div>
-        <div class="stat-value">{{libros.count}}</div>
+        <div class="stat-value">{{ total_libros }}</div>
     </div>
     <div class="stat-card" style="border-color: rgba(0, 243, 255, 0.3);">
         <div class="stat-title">Préstamos Activos</div>
-        <div class="stat-value" style="color: var(--neon-blue)">45</div>
+        <div class="stat-value" style="color: var(--neon-blue)">{{ prestamos_activos }}</div>
     </div>
     <div class="stat-card" style="border-color: rgba(255, 0, 85, 0.3);">
         <div class="stat-title">Multas Pendientes</div>
-        <div class="stat-value" style="color: var(--neon-red)">$120</div>
+        <div class="stat-value" style="color: var(--neon-red)">${{ multas_pendientes }}</div>
     </div>
     <div class="stat-card">
         <div class="stat-title">Usuarios Registrados</div>
-        <div class="stat-value">350</div>
+        <div class="stat-value">{{ usuarios_registrados }}</div>
     </div>
 </div>
 
@@ -43,30 +43,30 @@
             </tr>
         </thead>
         <tbody>
+            {% for libro in libros_recientes %}
             <tr>
-                <td>El Principito</td>
-                <td>Antoine de Saint-Exupéry</td>
-                <td>Ficción</td>
-                <td><span class="status available">Disponible</span></td>
+                <td>{{ libro.titulo }}</td>
+                <td>{{ libro.autor.nombre }} {{ libro.autor.apellido }}</td>
+                <td>
+                    {% for cat in libro.categorias.all %}
+                    {{ cat.nombre }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                    Sin categoría
+                    {% endfor %}
+                </td>
+                <td>
+                    {% if libro.esta_disponible %}
+                    <span class="status available">Disponible</span>
+                    {% else %}
+                    <span class="status borrowed">Agotado</span>
+                    {% endif %}
+                </td>
             </tr>
+            {% empty %}
             <tr>
-                <td>Cien Años de Soledad</td>
-                <td>Gabriel García Márquez</td>
-                <td>Novela</td>
-                <td><span class="status borrowed">Prestado</span></td>
+                <td colspan="4" style="text-align:center;">No hay libros registrados aún.</td>
             </tr>
-            <tr>
-                <td>1984</td>
-                <td>George Orwell</td>
-                <td>Ciencia Ficción</td>
-                <td><span class="status available">Disponible</span></td>
-            </tr>
-            <tr>
-                <td>Don Quijote</td>
-                <td>Miguel de Cervantes</td>
-                <td>Clásico</td>
-                <td><span class="status available">Disponible</span></td>
-            </tr>
+            {% endfor %}
         </tbody>
     </table>
 </section>
