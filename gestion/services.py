@@ -18,12 +18,16 @@ class ClienteOpenLibrary:
         })
 
     def obtener_libro_por_isbn(self, isbn):
-        """Obtiene detalles de un libro por su ISBN."""
+        """
+        Obtiene los metadatos de un libro dado su ISBN.
+        Retorna: Diccionario con datos o None si falla.
+        """
+        # [CRÍTICO] Endpoint oficial de OpenLibrary para datos estructurados
         url = f"{self.URL_BASE}/api/books"
         params = {
             'bibkeys': f'ISBN:{isbn}',
             'format': 'json',
-            'jscmd': 'data' # data nos incluye datos de autores y portadas
+            'jscmd': 'data' # 'data' es crucial para obtener autores y portadas en un solo request
         }
 
         try:
@@ -36,13 +40,15 @@ class ClienteOpenLibrary:
             return None
 
     def buscar_libros(self, consulta, limite=5):
-        """Busca libros por título o autor."""
+        """
+        Realiza una búsqueda de texto completo (título, autor) en la biblioteca.
+        """
         url = f"{self.URL_BASE}/search.json"
         params = {'q': consulta, 'limit': limite}
 
         try:
             respuesta = self.sesion.get(url, params=params)
-            respuesta.raise_for_status()
+            respuesta.raise_for_status() # [IMPORTANTE] Lanza error si el status HTTP no es 200 OK
             datos = respuesta.json()
             return datos.get('docs', [])
         except requests.RequestException:

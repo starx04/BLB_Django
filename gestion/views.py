@@ -201,26 +201,33 @@ def crear_prestamo(request):
 
             usuario = get_object_or_404(User, id=usuario_id)
             
-            # BLOQUEO MOROSOS
+            # ------------------------------------------------------------------
+            # [CRÍTICO] BLOQUEO DE MOROSOS
+            # Regla de Negocio: No se presta libros si el usuario tiene deudas o retrasos.
+            # ------------------------------------------------------------------
+            
             # 1. Chequear multas impagas indirectamente a traves de sus prestamos
             prestamos_usuario = Prestamos.objects.filter(usuario=usuario)
             tiene_multas = Multa.objects.filter(prestamo__in=prestamos_usuario, pagada=False).exists()
             
-            # 2. Chequear prestamos vencidos (ahora 'multado')
+            # 2. Chequear prestamos vencidos (Estado 'multado')
             tiene_vencidos = prestamos_usuario.filter(estado='multado').exists()
             
             if tiene_multas or tiene_vencidos:
+                 # [SEGURIDAD] Impedimos la acción y notificamos razón
                  return HttpResponseForbidden(f"El usuario {usuario.username} tiene multas pendientes o libros vencidos. No se puede realizar el prestamo.")
             
-            # Al crear desde el form, lo asumimos confirmado ('prestado')
-            # Si se quisiera borrador, se usaria confirmar() despues.
+            # ------------------------------------------------------------------
+            # CREACIÓN DEL PRÉSTAMO
+            # Al crear desde el panel, asumimos estado 'prestado' (Confirmado)
+            # ------------------------------------------------------------------
             prestamo = Prestamos.objects.create(libro=libro, 
                                                 usuario=usuario, 
-                                                fecha=fecha_prestamo,        # Usamos el campo 'fecha' del modelo (inicio)
-                                                fecha_max=fecha_max_calc,    # Plazo autom de 7 dias
+                                                fecha=fecha_prestamo,        # Fecha Inicio
+                                                fecha_max=fecha_max_calc,    # [IMPORTANTE] Fecha Límite Auto-calculada (7 días)
                                                 estado='prestado')
-            # No necesitamos cambiar libro.disponible = False manualmente
-            # La propiedad .disponibles lo calcula solo
+            
+            # Nota: libro.disponibles se actualiza automáticamente gracias a la propiedad en el modelo.
             return redirect('lista_prestamos')
     fecha=(timezone.now().date()).isoformat()        
     return render(request, 'crear_prestamo.html', {'libros': libros,
@@ -229,12 +236,17 @@ def crear_prestamo(request):
 
 @login_required
 def finalizar_prestamo(request, id):
+    """
+    Procesa la devolución de un libro.
+    Recibe datos manuales sobre condiciones especiales (Daño/Pérdida).
+    """
     prestamo = get_object_or_404(Prestamos, id=id)
     if request.method == 'POST':
-        # Capturamos datos del formulario de devolución
-        tipo_dano = request.POST.get('tipo_dano') # 'd' o 'p' o vacio
+        # [IMPORTANTE] Captura de datos para multas manuales
+        tipo_dano = request.POST.get('tipo_dano') # Opciones: 'd' (Daño), 'p' (Pérdida), '' (Ninguno)
         monto_dano = request.POST.get('monto_dano', 0)
         
+        # Llamamos al modelo que contiene la lógica de negocio real
         prestamo.finalizar(tipo_multa=tipo_dano, monto_multa=monto_dano)
     return redirect('lista_prestamos')
 
