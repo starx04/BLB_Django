@@ -97,20 +97,29 @@ class Prestamos(models.Model):
         ----------------------------
         Marca el libro como devuelto ('devuelto').
         Registra la fecha de hoy como fecha de devolución.
-        Calcula si hubo retraso y genera una multa automáticamente si es necesario.
-        Si se especifica un tipo de multa manual (daño/pérdida), la crea.
+        
+        LÓGICA DE MULTAS:
+        - Si es 'Pérdida' ('p'): Se cobra solo eso (valor reposición) y se ignora retraso.
+        - Si es 'Daño' ('d'): Se cobra el daño Y el retraso (si existe).
+        - Si es Normal: Solo se cobra retraso (si existe).
         """
         if not self.fecha_devolucion:
             self.fecha_devolucion = timezone.now().date()
             self.estado = 'devuelto'
             self.save()
             
-            # 1. Multa por DAÑO o PÉRDIDA (Manual)
-            if tipo_multa and tipo_multa in ['d', 'p']:
-                self.Multa.create(tipo=tipo_multa, monto=monto_multa)
+            # CASO 1: PÉRDIDA TOTAL (Excluyente)
+            # Si se perdió, cobramos el valor y terminamos.
+            if tipo_multa == 'p':
+                 self.Multa.create(tipo='p', monto=monto_multa)
+                 return 
             
-            # 2. Multa por RETRASO (Automática)
-            # Se genera siempre si hay días de retraso, independientemente de si hubo daño.
+            # CASO 2: CON DAÑOS (Acumulable)
+            if tipo_multa == 'd':
+                 self.Multa.create(tipo='d', monto=monto_multa)
+            
+            # CASO 3: RETRASO (Automático)
+            # Se genera si hay días de retraso (y no fue pérdida total)
             if self.dias_retraso > 0:
                 self.Multa.create(tipo='r')
 
