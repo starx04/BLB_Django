@@ -1,180 +1,90 @@
-# Documentación Técnica del Sistema de Gestión de Biblioteca (BLB Django)
+# DOCUMENTACIÓN TÉCNICA ESTRUCTURADA - GESTIÓN DE BIBLIOTECA
 
-Este documento detalla la arquitectura, lógica de negocio y flujos críticos del sistema. Está diseñado para desarrolladores que necesitan entender **dónde** está el código, **qué** hace y **cómo** se relacionan las piezas.
-
----
-
-## 1. Arquitectura de Datos (Modelos)
-
-**Archivo:** `c:\blb_django\gestion\models.py`
-
-Esta es la columna vertebral del sistema. Define cómo se guardan los datos y gran parte de la lógica automática.
-
-### A. Modelo `Prestamos` (El Núcleo del Negocio)
-Gestiona el ciclo de vida de un libro prestado.
-
-**Relaciones:**
-*   `libro` (ForeignKey -> `Libro`): Un préstamo pertenece a un solo libro.
-*   `usuario` (ForeignKey -> `User`): Un préstamo pertenece a un usuario.
-*   `Multa` (Reverse Relation): Un préstamo puede tener muchas multas (accedido vía `prestamo.Multa.all()`).
-
-**Lógica Crítica (Línea por Línea):**
-
-```python
-# Definición de Estados (Máquina de estados finita simple)
-ESTADOS = (
-    ('borrador', 'Borrador'),   # Aún no confirmado
-    ('prestado', 'Prestado'),   # Libro fuera de la biblioteca (Tiempo corriendo)
-    ('devuelto', 'Devuelto'),   # Proceso finalizado correctamente
-    ('multado', 'Multado')      # Proceso finalizado o vencido con deuda
-)
-
-# Método Crítico: confirmar()
-def confirmar(self):
-    # Solo actúa si está en borrador
-    if self.estado == 'borrador':
-        self.estado = 'prestado'           # TRANSICIÓN DE ESTADO
-        self.fecha = timezone.now().date() # Setea fecha inicio
-        
-        # LÓGICA DE NEGOCIO: Si no se define fecha manual, se dan 7 días.
-        if not self.fecha_max:
-            self.fecha_max = self.fecha + timezone.timedelta(days=7)
-        self.save()
-```
-
-### B. Modelo `Libro`
-Representa el inventario físico.
-
-**Variables Django Clave:**
-*   `models.ManyToManyField`: Usado en `categorias`. Permite que un libro tenga muchos géneros y un género muchos libros.
-*   `@property`: Decorador de Python usado para crear "campos virtuales" que no se guardan en BD pero se calculan al vuelo.
-
-**Lógica Crítica:**
-```python
-@property
-def disponibles(self):
-    # Lógica: Total Stock - (Total Préstamos Activos)
-    # Filter: Busca préstamos donde fecha_devolucion NO EXISTE (isnull=True)
-    prestados = self.Prestamos.filter(fecha_devolucion__isnull=True).count()
-    return self.stock - prestados
-```
-
-### C. Modelo `PerfilUsuario` (Extensión)
-Extiende el usuario nativo de Django (`auth.User`) para agregar datos de socio.
-
-**Concepto Django (`Signals`):**
-Se utiliza una señal `post_save`. Esto significa que "después de guardar" un Usuario en la tabla estándar de Django, **automáticamente** se dispara una función que crea/guarda este Perfil.
+Este documento proporciona una referencia exhaustiva de todos los módulos de código del sistema, incluyendo modelos de base de datos, lógica de control, aplicaciones, servicios y automatización.
 
 ---
 
-## 2. Lógica de Control (Vistas)
+# MÓDULO: CONFIGURACIÓN GLOBAL
+**Archivo:** `blb_django/settings.py`
+Es el cerebro del proyecto. Aquí se definen todas las reglas de infraestructura.
 
-**Archivo:** `c:\blb_django\gestion\views.py`
-
-Aquí se define quién puede hacer qué y cómo interactúan los usuarios con los datos.
-
-### A. Vista `crear_prestamo` (Validación Estricta)
-Esta función es el "portero" de la biblioteca.
-
-**Partes Cruciales:**
-
-```python
-# [CRÍTICO] Bloqueo de Morosos
-# 1. Obtenemos todos los préstamos históricos del usuario
-prestamos_usuario = Prestamos.objects.filter(usuario=usuario)
-
-# 2. Django Filter: Buscamos si existe ALGUNA multa impaga en esos préstamos
-tiene_multas = Multa.objects.filter(prestamo__in=prestamos_usuario, pagada=False).exists()
-
-# 3. Verificamos si tiene libros marcados como 'multado' (Vencidos)
-tiene_vencidos = prestamos_usuario.filter(estado='multado').exists()
-
-# Si cualquiera de las dos es True, SE BLOQUEA LA ACCIÓN.
-if tiene_multas or tiene_vencidos:
-     return HttpResponseForbidden(...) 
-```
-
-### B. Vista `finalizar_prestamo` (Gestión de Multas)
-Maneja el retorno y la creación de multas variadas (Daño vs Retraso).
-
-**Flujo:**
-1. Recibe `POST` request.
-2. Extrae `tipo_dano` y `monto_dano`.
-3. Llama a `prestamo.finalizar()` pasando esos argumentos.
-4. El modelo decide si crear 1 multa (solo retraso), 1 multa (solo daño) o 2 multas (ambas).
+*   **INSTALLED_APPS (Líneas 37-45):** Registra los módulos activos. Se añadió `'gestion'` para que Django reconozca nuestros modelos.
+*   **DATABASES (Líneas 80-85):** Configurado con SQLite3 para simplicidad y portabilidad.
+*   **LANGUAGE_CODE (Línea 110):** Seteado en `es-ES` para que los errores y fechas de Django salgan en español.
+*   **EMAIL CONFIG (Líneas 133-144):** 
+    *   **EMAIL_BACKEND:** Actualmente en modo `console`, lo que permite que los correos del Cron se vean en la terminal sin necesidad de un servidor real (ideal para desarrollo).
+*   **LOGIN_REDIRECT_URL (Línea 130):** Define que tras loguearse, el usuario siempre vaya al Dashboard.
 
 ---
 
-## 3. Automatización (Cron Jobs)
+# MÓDULO: GESTIÓN (APP PRINCIPAL)
 
-**Archivo:** `c:\blb_django\gestion\management\commands\verificar_vencimientos.py`
+## 1. Módulo: Modelos de Base de Datos
+**Archivo:** `gestion/models.py`
+Define la estructura de datos y lógica de negocio.
 
-Script diseñado para ejecutarse una vez al día automáticamente.
-
-**Clases Django:**
-*   `BaseCommand`: Clase padre necesaria para crear comandos de consola (`python manage.py ...`).
-
-**Lógica del Loop:**
-```python
-# Filtro Crítico: Solo préstamos ACTIVOS ('prestado') y VENCIDOS (fecha_max < hoy)
-prestamos_vencidos = Prestamos.objects.filter(estado='prestado', fecha_max__lt=hoy)
-
-for prestamo in prestamos_vencidos:
-    # 1. Cambiar estado para bloquear al usuario en el futuro
-    prestamo.estado = 'multado'
-    prestamo.save()
-    
-    # 2. Cálculo de multa
-    dias = (hoy - prestamo.fecha_max).days
-    monto = dias * 0.50
-    
-    # 3. Notificación (send_mail)
-    # ... envía correo ...
-```
+### A. Clase `Prestamos` (Líneas 52-155) - CRÍTICA
+*   **confirmar() (Líneas 84-92):** Activa el préstamo y calcula automáticamente **7 días** de plazo (Línea 91).
+*   **finalizar() (Líneas 94-124):** 
+    *   **Lógica Excluyente:** Si es Pérdida ('p'), cobra el valor y termina (Líneas 113-115).
+    *   **Lógica Acumulativa:** Si es Daño ('d'), cobra el daño Y verifica retraso acumulando multas (Líneas 118-124).
 
 ---
 
-## 4. Diagramas de Flujo del Sistema
+## 2. Módulo: Vistas (Lógica de Control)
+**Archivo:** `gestion/views.py`
 
-### A. Flujo de Creación de Préstamo
-```mermaid
-graph TD
-    A[Inicio: Usuario solicita libro] --> B{¿Usuario tiene Multas?}
-    B -- SI --> C[BLOQUEAR: Mostrar Error]
-    B -- NO --> D{¿Stock Disponible?}
-    D -- NO --> C
-    D -- SI --> E[Crear Objeto Prestamo]
-    E --> F[Estado = 'Prestado']
-    E --> G[Fecha Max = Hoy + 7 días]
-    G --> H[Fin: Préstamo Exitoso]
-```
+*   **crear_prestamo (Líneas 183-235):** [CRÍTICO] Implementa el **Bloqueo de Morosos**. Verifica multas impagas y estados vencidos antes de permitir un nuevo préstamo.
+*   **index (Líneas 14-35):** Genera los KPIs (indicadores) para el Dashboard dinámico.
 
-### B. Flujo de Devolución (Devolución)
-```mermaid
-graph TD
-    A[Inicio: Devolver Libro] --> B{¿Tiene Daño/Pérdida?}
-    
-    B -- SI (Input Manual) --> C[Crear Multa Tipo 'Daño']
-    B -- NO --> D
-    
-    D{¿Tiene Retraso?}
-    D -- SI (Auto Calc) --> E[Crear Multa Tipo 'Retraso']
-    D -- NO --> F
-    
-    C --> F
-    E --> F[Estado = 'Devuelto']
-    F --> G[Stock Disponible Aumenta (+1)]
-```
+---
 
-### C. Flujo Automático (Cron Job Diario)
-```mermaid
-graph TD
-    A[Cron se ejecuta (00:00 AM)] --> B[Buscar Préstamos donde Fecha_Max < Hoy]
-    B --> C{¿Encontró resultados?}
-    C -- SI --> D[Iterar cada Préstamo]
-    D --> E[Cambiar Estado a 'MULTADO']
-    E --> F[Calcular $$ Pendiente]
-    F --> G[Enviar Email a Usuario]
-    G --> H[Siguiente Préstamo...]
-    C -- NO --> I[Fin del Proceso]
-```
+## 3. Módulo: Formularios
+**Archivo:** `gestion/forms.py`
+
+*   **FormularioRegistroExtendido (Líneas 36-69):** 
+    *   **Importancia:** ALTA. 
+    *   **Lógica:** Sobreescribe el método `save()` (Línea 57) para guardar datos en el `User` de Django y en nuestro `PerfilUsuario` (DNI, Teléfono) en una sola transacción.
+
+---
+
+## 4. Módulo: Servicios Externos
+**Archivo:** `gestion/services.py`
+
+*   **ClienteOpenLibrary (Líneas 3-68):** 
+    *   **Función:** Automatiza la búsqueda en internet.
+    *   **Lógica Crítica:** Gestiona sesiones con `requests` y formatea las URLs de portadas de libros usando el ID o el ISBN (Líneas 57-67).
+
+---
+
+## 5. Módulo: Pruebas Automáticas (Tests)
+**Archivo:** `gestion/tests.py`
+
+*   **TestModelosBiblioteca (Clase):**
+    *   **test_prestamo_vencido_genera_multa (Línea 68):** Simula el paso del tiempo para asegurar que el sistema cobre exactamente $0.50 por día de retraso.
+    *   **test_prestamo_perdida_excluyente (Línea 94):** Garantiza que no se cobren cargos injustos de retraso si el libro fue reportado como perdido.
+
+---
+
+## 6. Módulo: Aplicación y Señales
+**Archivo:** `gestion/apps.py`
+
+*   **GestionConfig (Líneas 4-6):** Configuración básica del nombre de la app.
+*   **Nota:** Aquí es donde Django registra internamente la aplicación para que las tablas se creen correctamente en la base de datos.
+
+---
+
+## 7. Módulo: Automatización (Management Commands)
+**Directorio:** `gestion/management/commands/verificar_vencimientos.py`
+
+*   **Función:** Actúa como un **CRON JOB** (tarea programada).
+*   **Lógica (Líneas 13-53):** 
+    1. Filtra préstamos vencidos.
+    2. Bloquea al usuario (Estado 'multado').
+    3. Envía un correo electrónico automático informando del retraso y la multa.
+
+---
+
+## 8. Módulo: Rutas (URLS)
+**Archivo:** `gestion/urls.py`
+Mantiene el mapa de navegación, separando la administración de usuarios, libros, préstamos y la integración con la API.

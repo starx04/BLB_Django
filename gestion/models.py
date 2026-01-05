@@ -161,9 +161,21 @@ class Multa(models.Model):
     monto = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     pagada  = models.BooleanField(default=False)
     fecha  =  models.DateField(default=timezone.now)
+    fecha_pago = models.DateTimeField(blank=True, null=True)
+    pagada_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='multas_procesadas')
         
     def __str__(self):
-        return f"Multa {self.codigo} ({self.tipo}) - {self.monto}"
+        return f"Multa {self.codigo} ({self.tipo}) - ${self.monto} - {'PAGADA' if self.pagada else 'PENDIENTE'}"
+    
+    def pagar(self, usuario_cajero):
+        """Marca la multa como pagada y registra quién procesó el pago."""
+        if not self.pagada:
+            self.pagada = True
+            self.fecha_pago = timezone.now()
+            self.pagada_por = usuario_cajero
+            self.save()
+            return True
+        return False
         
     def save(self, *args, **kwargs):
         if not self.codigo:
@@ -212,4 +224,33 @@ class Gasto(models.Model):
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
 
     def __str__(self):
-        return f"{self.concepto} - ${self.monto}" 
+        return f"{self.concepto} - ${self.monto}"
+
+# --- MODELO DE AUDITORÍA ---
+class RegistroAuditoria(models.Model):
+    """Registra todas las acciones importantes para trazabilidad."""
+    ACCIONES = (
+        ('crear_prestamo', 'Crear Préstamo'),
+        ('finalizar_prestamo', 'Finalizar Préstamo'),
+        ('renovar_prestamo', 'Renovar Préstamo'),
+        ('pagar_multa', 'Pagar Multa'),
+        ('crear_libro', 'Crear Libro'),
+        ('crear_autor', 'Crear Autor'),
+    )
+    
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='acciones_realizadas')
+    accion = models.CharField(max_length=50, choices=ACCIONES)
+    descripcion = models.TextField()
+    fecha_hora = models.DateTimeField(default=timezone.now)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    
+    # Referencias opcionales
+    prestamo_id = models.IntegerField(null=True, blank=True)
+    multa_id = models.IntegerField(null=True, blank=True)
+    libro_id = models.IntegerField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-fecha_hora']
+    
+    def __str__(self):
+        return f"{self.get_accion_display()} por {self.usuario} - {self.fecha_hora.strftime('%Y-%m-%d %H:%M')}" 

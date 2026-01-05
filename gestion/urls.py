@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import *
 from django.contrib.auth import views as auth_views
+from .reportes import generar_reporte_auditoria_pdf, generar_reporte_multas_pdf
 
 urlpatterns = [
     path("",index,name="index"),
@@ -42,6 +43,11 @@ urlpatterns = [
     
     #Multas
     path('multas/', lista_multas, name="lista_multa"),
+    path('multas/<int:id>/pagar/', pagar_multa, name="pagar_multa"),
+
+    # Reportes PDF
+    path('reportes/auditoria/', generar_reporte_auditoria_pdf, name="reporte_auditoria_pdf"),
+    path('reportes/multas/', generar_reporte_multas_pdf, name="reporte_multas_pdf"),
 
     # API
     path('api/buscar/', buscar_libro_api, name="buscar_libro_api"),

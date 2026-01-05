@@ -4,36 +4,55 @@
 <section class="recent-section">
     <div class="section-header">
         <h2>Multas</h2>
-        <!-- No create button for multas in views explicitly except 'crear_multa' which is pass -->
+        <a href="{% url 'reporte_multas_pdf' %}" class="btn-add" style="background: #e74c3c;">📄 Descargar Reporte
+            PDF</a>
     </div>
     <table>
         <thead>
             <tr>
+                <th>Código</th>
                 <th>Préstamo</th>
+                <th>Usuario</th>
                 <th>Tipo</th>
                 <th>Monto</th>
-                <th>Pagada</th>
+                <th>Estado</th>
                 <th>Fecha</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for multa in multas %}
             <tr>
-                <td>{{ multa.prestamo }}</td>
+                <td>{{ multa.codigo }}</td>
+                <td>{{ multa.prestamo.libro.titulo }}</td>
+                <td>{{ multa.prestamo.usuario.username }}</td>
                 <td>{{ multa.get_tipo_display }}</td>
-                <td>{{ multa.monto }}</td>
+                <td>${{ multa.monto }}</td>
                 <td>
                     {% if multa.pagada %}
-                    <span class="status available">Pagada</span>
+                    <span class="status available">✓ PAGADA</span>
                     {% else %}
-                    <span class="status borrowed">Pendiente</span>
+                    <span class="status borrowed">⚠ PENDIENTE</span>
                     {% endif %}
                 </td>
                 <td>{{ multa.fecha }}</td>
+                <td>
+                    {% if not multa.pagada %}
+                    <form action="{% url 'pagar_multa' multa.id %}" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit"
+                            style="background: var(--neon-green); font-size: 0.8em; padding: 5px 10px; border: none; cursor: pointer; border-radius: 3px;">
+                            💰 Pagar
+                        </button>
+                    </form>
+                    {% else %}
+                    <span style="color: #888;">Pagada por: {{ multa.pagada_por.username }}</span>
+                    {% endif %}
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5" style="text-align: center;">No hay multas registradas.</td>
+                <td colspan="8" style="text-align: center;">No hay multas registradas.</td>
             </tr>
             {% endfor %}
         </tbody>

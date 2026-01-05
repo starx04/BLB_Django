@@ -9,9 +9,10 @@ from django.core.files.base import ContentFile
 from django.contrib.auth import login
 from django.db.models import Sum
 
-from .models import Libro, Prestamos, Multa, Autor
+from .models import Libro, Prestamos, Multa, Autor, RegistroAuditoria
 
 def index(request):
+    """Vista pública del Dashboard - No requiere login."""
     title = settings.TITLE
     
     # KPIs del Dashboard
@@ -227,6 +228,16 @@ def crear_prestamo(request):
                                                 fecha_max=fecha_max_calc,    # [IMPORTANTE] Fecha Límite Auto-calculada (7 días)
                                                 estado='prestado')
             
+            # [AUDITORÍA] Registrar acción
+            RegistroAuditoria.objects.create(
+                usuario=request.user,
+                accion='crear_prestamo',
+                descripcion=f"Préstamo {prestamo.codigo}: {libro.titulo} para {usuario.username}",
+                prestamo_id=prestamo.id,
+                libro_id=libro.id,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             # Nota: libro.disponibles se actualiza automáticamente gracias a la propiedad en el modelo.
             return redirect('lista_prestamos')
     fecha=(timezone.now().date()).isoformat()        
@@ -248,6 +259,15 @@ def finalizar_prestamo(request, id):
         
         # Llamamos al modelo que contiene la lógica de negocio real
         prestamo.finalizar(tipo_multa=tipo_dano, monto_multa=monto_dano)
+        
+        # [AUDITORÍA] Registrar devolución
+        RegistroAuditoria.objects.create(
+            usuario=request.user,
+            accion='finalizar_prestamo',
+            descripcion=f"Devolución {prestamo.codigo}: {prestamo.libro.titulo} - Estado: {tipo_dano or 'Normal'}",
+            prestamo_id=prestamo.id,
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
     return redirect('lista_prestamos')
 
 @login_required
@@ -262,8 +282,27 @@ def renovar_prestamo(request, id):
 #--SECCION MULTAS--
 @login_required
 def lista_multas(request):
-    multas = Multa.objects.all()
+    multas = Multa.objects.all().order_by('-fecha')
     return render(request, 'multas.html', {'multas': multas})
+
+@login_required
+def pagar_multa(request, id):
+    """
+    Procesa el pago simulado de una multa.
+    Registra quién procesó el pago para auditoría.
+    """
+    multa = get_object_or_404(Multa, id=id)
+    if request.method == 'POST':
+        if multa.pagar(usuario_cajero=request.user):
+            # [AUDITORÍA] Registrar pago
+            RegistroAuditoria.objects.create(
+                usuario=request.user,
+                accion='pagar_multa',
+                descripcion=f"Pago de multa {multa.codigo} - ${multa.monto} - Usuario: {multa.prestamo.usuario.username}",
+                multa_id=multa.id,
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+    return redirect('lista_multa')
 
 
 #--SECCION USUARIOS--
