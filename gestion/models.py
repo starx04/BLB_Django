@@ -58,12 +58,13 @@ class Prestamos(models.Model):
     fecha_devolucion = models.DateField(blank=True, null=True) #Permite a django grabar en blanco y en nulo
     
     ESTADOS = (
-        ('borrador', 'Borrador'),
+        ('solicitado', 'Solicitado'),
         ('prestado', 'Prestado'),
         ('devuelto', 'Devuelto'),
-        ('multado', 'Multado')
+        ('multado', 'Multado'),
+        ('rechazado', 'Rechazado'),
     )
-    estado = models.CharField(max_length=20, choices=ESTADOS, default='borrador')
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='solicitado')
     renovaciones = models.PositiveIntegerField(default=0)
     
     class Meta:
@@ -82,14 +83,23 @@ class Prestamos(models.Model):
         super().save(*args, **kwargs)
 
     def confirmar(self):
-        """Confirma un borrador y activa el préstamo."""
-        if self.estado == 'borrador':
+        """Acepta la solicitud y activa el préstamo."""
+        if self.estado == 'solicitado':
             self.estado = 'prestado'
             self.fecha = timezone.now().date()
-            # Plazo fijo de 7 días (1 semana) desde la fecha de préstamo
             if not self.fecha_max:
                 self.fecha_max = self.fecha + timezone.timedelta(days=7)
             self.save()
+            return True
+        return False
+
+    def rechazar(self):
+        """Rechaza la solicitud de préstamo."""
+        if self.estado == 'solicitado':
+            self.estado = 'rechazado'
+            self.save()
+            return True
+        return False
 
     def finalizar(self, tipo_multa=None, monto_multa=0):
         """

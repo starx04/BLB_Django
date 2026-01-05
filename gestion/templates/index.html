@@ -280,31 +280,51 @@
             <a href="{% url 'index' %}" class="menu-item active">
                 <span>Dashboard</span>
             </a>
+
             <a href="{% url 'lista_libros' %}" class="menu-item">
                 <span>Libros</span>
             </a>
+
             <a href="{% url 'lista_autores' %}" class="menu-item">
                 <span>Autores</span>
             </a>
+
             <a href="{% url 'lista_prestamos' %}" class="menu-item">
                 <span>Préstamos</span>
             </a>
-            <a href="{% url 'password_change' %}" class="menu-item">
-                <span>Configuración</span>
+
+            <a href="{% url 'lista_multa' %}" class="menu-item">
+                <span>Mis Multas</span>
             </a>
-            {%if not user.is_authenticated %}
-            <a href="{% url 'login' %}" class="menu-item">
-                <span>Inicio de Sesión</span>
+
+            {% if user.is_superuser %}
+            <a href="{% url 'panel_administracion' %}" class="menu-item" style="border: 1px solid var(--neon-red);">
+                <span style="color: var(--neon-red);">🛠 Panel Admin</span>
             </a>
             {% endif %}
 
-            {% if user.is_authenticated %}
-            <form method="post" action="{% url 'logout' %}">
-                {% csrf_token %}
-
-                <button type="submit">Cerrar Sesión</button>
-            </form>
-            {% endif %}
+            <div style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                {% if user.is_authenticated %}
+                <div class="user-info"
+                    style="margin-bottom: 1rem; padding: 0 1rem; font-size: 0.8rem; color: var(--text-muted);">
+                    Usuario: <span style="color: var(--neon-blue);">{{ user.username }}</span>
+                </div>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="menu-item"
+                        style="width: 100%; border: none; background: rgba(255,0,85,0.1); color: var(--neon-red); cursor: pointer; text-align: left;">
+                        <span>Cerrar Sesión</span>
+                    </button>
+                </form>
+                {% else %}
+                <a href="{% url 'login' %}" class="menu-item">
+                    <span>💡 Iniciar Sesión</span>
+                </a>
+                <a href="{% url 'registro' %}" class="menu-item">
+                    <span>✍️ Registrarse</span>
+                </a>
+                {% endif %}
+            </div>
         </nav>
     </aside>
 

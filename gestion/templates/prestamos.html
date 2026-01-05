@@ -28,39 +28,67 @@
                 <td>{{ prestamo.fecha }}</td>
                 <td>{{ prestamo.fecha_max|default_if_none:"-" }}</td>
                 <td>{{ prestamo.fecha_devolucion|default_if_none:"Pending" }}</td>
-                <td>{{ prestamo.get_estado_display }}</td>
-                <td>{{ prestamo.dias_retraso|default_if_none:"0" }}</td>
-                <td>{{ prestamo.multa_retraso|default_if_none:"-" }}</td>
                 <td>
+                    <span
+                        class="status {% if prestamo.estado == 'prestado' %}available{% elif prestamo.estado == 'solicitado' %}borrowed{% else %}returned{% endif %}">
+                        {{ prestamo.get_estado_display }}
+                    </span>
+                </td>
+                <td>{{ prestamo.dias_retraso }}</td>
+                <td>{% if prestamo.Multa.exists %}⚠️ Sí{% else %}No{% endif %}</td>
+                <td>
+                    {% if prestamo.estado == 'solicitado' %}
+                    {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name %}
+                    <div style="display: flex; gap: 5px;">
+                        <form action="{% url 'aceptar_solicitud' prestamo.id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit"
+                                style="background: var(--neon-green); color: black; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">✅
+                                Aceptar</button>
+                        </form>
+                        <form action="{% url 'rechazar_solicitud' prestamo.id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit"
+                                style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">❌
+                                Rechazar</button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <span style="color: #666; font-style: italic;">Esperando aprobación</span>
+                    {% endif %}
+                    {% endif %}
+
                     {% if prestamo.estado == 'prestado' %}
+                    {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name %}
                     <div style="display: flex; gap: 5px;">
                         <form action="{% url 'finalizar_prestamo' prestamo.id %}" method="post"
                             style="display:flex; flex-direction:column; gap:2px;">
                             {% csrf_token %}
-                            <select name="tipo_dano" style="font-size: 0.7em; padding: 2px;">
+                            <select name="tipo_dano" style="background: #222; color: #fff; border: 1px solid #444;">
                                 <option value="">Buen Estado</option>
                                 <option value="d">Con Daños</option>
                                 <option value="p">Pérdida Total</option>
                             </select>
-                            <input type="number" name="monto_dano" placeholder="Monto Cargo ($)"
-                                style="font-size: 0.7em; width: 80px;" min="0" step="0.5">
-                            <button type="submit"
-                                style="background: var(--neon-blue); font-size: 0.8em; padding: 5px;">Devolver</button>
+                            <input type="number" name="monto_dano" placeholder="Monto ($)"
+                                style="width: 80px; background: #222; color: #fff; border: 1px solid #444;">
+                            <button type="submit" style="background: var(--neon-blue); color: black;">Finalizar</button>
                         </form>
                         {% if prestamo.renovaciones < 3 %} <form action="{% url 'renovar_prestamo' prestamo.id %}"
                             method="post">
                             {% csrf_token %}
-                            <button type="submit"
-                                style="background: orange; font-size: 0.8em; padding: 5px;">Renovar</button>
+                            <button type="submit" style="background: var(--neon-purple); color: white;">Renovar</button>
                             </form>
                             {% endif %}
                     </div>
+                    {% else %}
+                    <span style="color: var(--neon-green);">Préstamo Activo</span>
+                    {% endif %}
                     {% endif %}
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7" style="text-align: center;">No hay préstamos registrados.</td>
+                <td colspan="9" style="text-align: center;">No hay préstamos para mostrar.</td>
             </tr>
             {% endfor %}
         </tbody>

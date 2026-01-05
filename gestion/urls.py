@@ -40,10 +40,16 @@ urlpatterns = [
     path('prestamos/nuevo/', crear_prestamo, name="crear_prestamo"),
     path('prestamos/<int:id>/finalizar/', finalizar_prestamo, name="finalizar_prestamo"),
     path('prestamos/<int:id>/renovar/', renovar_prestamo, name="renovar_prestamo"),
+    path('prestamos/<int:id>/aceptar/', aceptar_solicitud, name="aceptar_solicitud"),
+    path('prestamos/<int:id>/rechazar/', rechazar_solicitud, name="rechazar_solicitud"),
     
     #Multas
     path('multas/', lista_multas, name="lista_multa"),
     path('multas/<int:id>/pagar/', pagar_multa, name="pagar_multa"),
+
+    # Admin Panel
+    path('admin_panel/', panel_administracion, name="panel_administracion"),
+    path('admin_panel/empleado/nuevo/', crear_empleado, name="crear_empleado"),
 
     # Reportes PDF
     path('reportes/auditoria/', generar_reporte_auditoria_pdf, name="reporte_auditoria_pdf"),

@@ -11,6 +11,21 @@ from django.db.models import Sum
 
 from .models import Libro, Prestamos, Multa, Autor, RegistroAuditoria
 
+# --- DECORADORES DE ROLES ---
+def es_admin(user):
+    return user.is_superuser
+
+def es_bibliotecario(user):
+    return user.groups.filter(name='Bibliotecario').exists() or user.is_superuser
+
+def es_bodeguero(user):
+    return user.groups.filter(name='Bodeguero').exists() or user.is_superuser
+
+def es_cliente(user):
+    return user.groups.filter(name='Cliente').exists()
+
+from django.contrib.auth.decorators import user_passes_test
+
 def index(request):
     """Vista pública del Dashboard - No requiere login."""
     title = settings.TITLE
@@ -174,108 +189,167 @@ def crear_autor(request,id=None):
     }
     return render(request, 'crear_autor.html', context)
     
-#--SECCION PRESTAMOS--
+@user_passes_test(es_bodeguero)
+@login_required
+def crear_libros(request):
+    from .models import Categoria
+    autores = Autor.objects.all()
+    categorias = Categoria.objects.all()
+    
+    if request.method == 'POST':
+        titulo = request.POST.get('titulo')
+        nombre_autor_texto = request.POST.get('autor_texto')
+        isbn = request.POST.get('isbn')
+        stock = request.POST.get('stock', 1)
+        
+        # Lógica simplificada de creación para brevedad en esta actualización
+        nombre = nombre_autor_texto.strip()
+        partes = nombre.split(' ')
+        nombre_nuevo = " ".join(partes[:-1]) if len(partes) > 1 else nombre
+        apellido_nuevo = partes[-1] if len(partes) > 1 else ""
+        
+        autor_final, _ = Autor.objects.get_or_create(nombre__iexact=nombre_nuevo, apellido__iexact=apellido_nuevo, defaults={'nombre': nombre_nuevo, 'apellido': apellido_nuevo})
+        
+        nuevo_libro = Libro.objects.create(titulo=titulo, autor=autor_final, stock=int(stock), isbn=isbn)
+        
+        # [AUDITORIA]
+        RegistroAuditoria.objects.create(
+            usuario=request.user,
+            accion='crear_libro',
+            descripcion=f"Bodeguero creó libro: {titulo}",
+            libro_id=nuevo_libro.id,
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        return redirect('lista_libros')
+    return render(request, 'crear_libros.html', {'autores': autores, 'categorias': categorias})
+
+#-- SECCION AUTORES --
+@login_required
+def lista_autores(request):
+    autores = Autor.objects.all()
+    return render(request, 'autores.html', {'autores': autores})
+
+@user_passes_test(es_bodeguero)
+@login_required
+def crear_autor(request, id=None):
+    autor = get_object_or_404(Autor, id=id) if id else None
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre')
+        apellido = request.POST.get('apellido')
+        if autor:
+            autor.nombre, autor.apellido = nombre, apellido
+            autor.save()
+        else:
+            Autor.objects.create(nombre=nombre, apellido=apellido)
+        return redirect('lista_autores')
+    return render(request, 'crear_autor.html', {'autor': autor, 'mode': 'Editar' if id else 'Nuevo'})
+
+#-- SECCION ADMIN --
+@user_passes_test(es_admin)
+@login_required
+def panel_administracion(request):
+    audit_logs = RegistroAuditoria.objects.all().order_by('-fecha_hora')[:100]
+    usuarios = User.objects.all()
+    context = {
+        'audit_logs': audit_logs,
+        'usuarios': usuarios,
+    }
+    return render(request, 'admin_panel.html', context)
+
+@user_passes_test(es_admin)
+@login_required
+def crear_empleado(request):
+    from django.contrib.auth.models import Group
+    grupos = Group.objects.exclude(name='Cliente')
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        passw = request.POST.get('password')
+        email = request.POST.get('email')
+        grupo_id = request.POST.get('grupo')
+        
+        user = User.objects.create_user(username=username, password=passw, email=email)
+        grupo = Group.objects.get(id=grupo_id)
+        user.groups.add(grupo)
+        
+        RegistroAuditoria.objects.create(
+            usuario=request.user,
+            accion='crear_usuario',
+            descripcion=f"Admin creó empleado {username} como {grupo.name}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        return redirect('panel_administracion')
+    return render(request, 'crear_empleado.html', {'grupos': grupos})
+
+#-- SECCION PRESTAMOS --
 @login_required
 def lista_prestamos(request):
-    prestamos = Prestamos.objects.all()
+    if es_bibliotecario(request.user):
+        prestamos = Prestamos.objects.all().order_by('-fecha')
+    else:
+        prestamos = Prestamos.objects.filter(usuario=request.user).order_by('-fecha')
     return render(request, 'prestamos.html', {'prestamos': prestamos})
 
 @login_required
 def crear_prestamo(request):
-    if not request.user.has_perm('gestion.ver_prestamos'):
-        return HttpResponseForbidden()
     libros = [l for l in Libro.objects.all() if l.disponibles > 0] 
-    usuarios = User.objects.all()
+    es_personal = es_bibliotecario(request.user)
+    usuarios = User.objects.all() if es_personal else [request.user]
+    
     if request.method == 'POST':
         libro_id = request.POST.get('libro')
-        usuario_id = request.POST.get('usuario')
-        fecha_str = request.POST.get('fecha_prestamo') # Fecha de inicio elegida
+        usuario_id = request.POST.get('usuario') if es_personal else request.user.id
+        fecha_str = request.POST.get('fecha_prestamo')
         
-        if libro_id and usuario_id and fecha_str:
-            from datetime import datetime
-            fecha_prestamo = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-            # Calculo automático: 7 días después de la fecha de inicio
-            fecha_max_calc = fecha_prestamo + timezone.timedelta(days=7)
-            libro = get_object_or_404(Libro, id=libro_id)
-            if libro.disponibles < 1:
-                return HttpResponseForbidden("No hay copias disponibles")
-
-            usuario = get_object_or_404(User, id=usuario_id)
-            
-            # ------------------------------------------------------------------
-            # [CRÍTICO] BLOQUEO DE MOROSOS
-            # Regla de Negocio: No se presta libros si el usuario tiene deudas o retrasos.
-            # ------------------------------------------------------------------
-            
-            # 1. Chequear multas impagas indirectamente a traves de sus prestamos
-            prestamos_usuario = Prestamos.objects.filter(usuario=usuario)
-            tiene_multas = Multa.objects.filter(prestamo__in=prestamos_usuario, pagada=False).exists()
-            
-            # 2. Chequear prestamos vencidos (Estado 'multado')
-            tiene_vencidos = prestamos_usuario.filter(estado='multado').exists()
-            
-            if tiene_multas or tiene_vencidos:
-                 # [SEGURIDAD] Impedimos la acción y notificamos razón
-                 return HttpResponseForbidden(f"El usuario {usuario.username} tiene multas pendientes o libros vencidos. No se puede realizar el prestamo.")
-            
-            # ------------------------------------------------------------------
-            # CREACIÓN DEL PRÉSTAMO
-            # Al crear desde el panel, asumimos estado 'prestado' (Confirmado)
-            # ------------------------------------------------------------------
-            prestamo = Prestamos.objects.create(libro=libro, 
-                                                usuario=usuario, 
-                                                fecha=fecha_prestamo,        # Fecha Inicio
-                                                fecha_max=fecha_max_calc,    # [IMPORTANTE] Fecha Límite Auto-calculada (7 días)
-                                                estado='prestado')
-            
-            # [AUDITORÍA] Registrar acción
-            RegistroAuditoria.objects.create(
-                usuario=request.user,
-                accion='crear_prestamo',
-                descripcion=f"Préstamo {prestamo.codigo}: {libro.titulo} para {usuario.username}",
-                prestamo_id=prestamo.id,
-                libro_id=libro.id,
-                ip_address=request.META.get('REMOTE_ADDR')
-            )
-            
-            # Nota: libro.disponibles se actualiza automáticamente gracias a la propiedad en el modelo.
-            return redirect('lista_prestamos')
-    fecha=(timezone.now().date()).isoformat()        
-    return render(request, 'crear_prestamo.html', {'libros': libros,
-                                                                    'usuarios': usuarios,
-                                                                    'fecha': fecha})
-
-@login_required
-def finalizar_prestamo(request, id):
-    """
-    Procesa la devolución de un libro.
-    Recibe datos manuales sobre condiciones especiales (Daño/Pérdida).
-    """
-    prestamo = get_object_or_404(Prestamos, id=id)
-    if request.method == 'POST':
-        # [IMPORTANTE] Captura de datos para multas manuales
-        tipo_dano = request.POST.get('tipo_dano') # Opciones: 'd' (Daño), 'p' (Pérdida), '' (Ninguno)
-        monto_dano = request.POST.get('monto_dano', 0)
+        fecha_prestamo = timezone.now().date() # Por defecto hoy
+        libro = get_object_or_404(Libro, id=libro_id)
+        usuario = get_object_or_404(User, id=usuario_id)
         
-        # Llamamos al modelo que contiene la lógica de negocio real
-        prestamo.finalizar(tipo_multa=tipo_dano, monto_multa=monto_dano)
-        
-        # [AUDITORÍA] Registrar devolución
-        RegistroAuditoria.objects.create(
-            usuario=request.user,
-            accion='finalizar_prestamo',
-            descripcion=f"Devolución {prestamo.codigo}: {prestamo.libro.titulo} - Estado: {tipo_dano or 'Normal'}",
-            prestamo_id=prestamo.id,
-            ip_address=request.META.get('REMOTE_ADDR')
+        # Bloqueo morosos
+        tiene_multas = Multa.objects.filter(prestamo__usuario=usuario, pagada=False).exists()
+        if tiene_multas:
+            return HttpResponseForbidden("Usuario con multas pendientes.")
+            
+        estado = 'prestado' if es_personal else 'solicitado'
+        prestamo = Prestamos.objects.create(
+            libro=libro, usuario=usuario, 
+            fecha=fecha_prestamo, 
+            fecha_max=fecha_prestamo + timezone.timedelta(days=7),
+            estado=estado
         )
+        return redirect('lista_prestamos')
+    return render(request, 'crear_prestamo.html', {'libros': libros, 'usuarios': usuarios, 'es_personal': es_personal})
+
+@user_passes_test(es_bibliotecario)
+@login_required
+def aceptar_solicitud(request, id):
+    prestamo = get_object_or_404(Prestamos, id=id)
+    prestamo.confirmar()
     return redirect('lista_prestamos')
 
+@user_passes_test(es_bibliotecario)
+@login_required
+def rechazar_solicitud(request, id):
+    prestamo = get_object_or_404(Prestamos, id=id)
+    prestamo.rechazar()
+    return redirect('lista_prestamos')
+
+@user_passes_test(es_bibliotecario)
+@login_required
+def finalizar_prestamo(request, id):
+    prestamo = get_object_or_404(Prestamos, id=id)
+    if request.method == 'POST':
+        tipo = request.POST.get('tipo_dano')
+        monto = request.POST.get('monto_dano', 0)
+        prestamo.finalizar(tipo_multa=tipo, monto_multa=monto)
+    return redirect('lista_prestamos')
+
+@user_passes_test(es_bibliotecario)
 @login_required
 def renovar_prestamo(request, id):
     prestamo = get_object_or_404(Prestamos, id=id)
-    if request.method == 'POST':
-        prestamo.renovar()
+    prestamo.renovar()
     return redirect('lista_prestamos')
+
 
 
 
@@ -330,15 +404,23 @@ from .forms import FormularioBusquedaLibro, FormularioRegistroExtendido
 
 #--SECCION REGISTRO--
 def registro(request):
+    from django.contrib.auth.models import Group
     if request.method == 'POST':
-        form = FormularioRegistroExtendido(request.POST) # Formulario extendido
+        form = FormularioRegistroExtendido(request.POST)
         if form.is_valid():
             usuario = form.save()
-            try:
-                permiso = Permission.objects.get(codename='gestionar_prestamos', content_type__app_label='gestion')
-                usuario.user_permissions.add(permiso)
-            except Permission.DoesNotExist:
-                pass 
+            # Asignar automáticamente al grupo 'Cliente'
+            grupo_cliente, _ = Group.objects.get_or_create(name='Cliente')
+            usuario.groups.add(grupo_cliente)
+            
+            # [AUDITORIA]
+            RegistroAuditoria.objects.create(
+                usuario=usuario,
+                accion='crear_usuario',
+                descripcion=f"Nuevo cliente se registró: {usuario.username}",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
             login(request, usuario)
             return redirect('index')
     else:
