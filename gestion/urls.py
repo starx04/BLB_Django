@@ -1,41 +1,29 @@
 from django.urls import path
 from .views import *
 from django.contrib.auth import views as auth_views
-from .reportes import generar_reporte_auditoria_pdf, generar_reporte_multas_pdf
 
 urlpatterns = [
-    path("",index,name="index"),
+    path("", index, name="index"),
 
-    #Path class views
-    path('libros_list/', LibroListView.as_view(), name="libro_list"),
-    path('libros/nuevo/', LibroCreateView.as_view(), name="libro_create"),
-    path('libros/<int:pk>/editar/', LibroUpdateView.as_view(), name="libro_update"),
-    path('libros/<int:pk>/eliminar/', LibroDeleteView.as_view(), name="libro_delete"),
-    path('libros/<int:pk>/', LibroDetailView.as_view(), name="libro_detail"),
-
-    #Gestion Usuarios
+    # Gestion Usuarios y Auth
     path('usuarios/', lista_usuarios, name="lista_usuarios"),
     path('usuarios/<int:id>/', detalle_usuario, name="detalle_usuario"),
-    path('login/',auth_views.LoginView.as_view(),name="login"),
-    path('logout/',auth_views.LogoutView.as_view(next_page="login"),name="logout"),
+    path('login/', auth_views.LoginView.as_view(), name="login"),
+    path('logout/', auth_views.LogoutView.as_view(next_page="login"), name="logout"),
+    path('password_change/', auth_views.PasswordChangeView.as_view(), name="password_change"),
+    path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name="password_change_done"),
+    path('registro/', registro, name="registro"),
 
-    #Cambio de contraseña
-    path('password_change/',auth_views.PasswordChangeView.as_view(),name="password_change"),
-    path('password_change/done/',auth_views.PasswordChangeDoneView.as_view(),name="password_change_done"),
+    # Libros
+    path('libros/', lista_libros, name="lista_libros"),
+    path('libros/nuevo/', crear_libros, name="crear_libros"),
     
-    #Registro
-    path('registro/',registro,name="registro"),
-
-    #Libros
-    path('libros/',lista_libros,name="lista_libros"),
-    path('libros/nuevo/',crear_libros,name="crear_libros"),
+    # Autores
+    path('autores/', lista_autores, name="lista_autores"),
+    path('autores/nuevo/', crear_autor, name="crear_autor"),
+    path('autores/<int:id>/editar/', crear_autor, name="editar_autor"),
     
-    #Autores
-    path('autores/',lista_autores,name="lista_autores"),
-    path('autores/nuevo',crear_autor,name="crear_autor"),
-    path('autores/<int:id>/editar',crear_autor,name="editar_autor"),
-    
-    #Prestamos
+    # Préstamos
     path('prestamos/', lista_prestamos, name="lista_prestamos"),
     path('prestamos/nuevo/', crear_prestamo, name="crear_prestamo"),
     path('prestamos/<int:id>/finalizar/', finalizar_prestamo, name="finalizar_prestamo"),
@@ -43,7 +31,7 @@ urlpatterns = [
     path('prestamos/<int:id>/aceptar/', aceptar_solicitud, name="aceptar_solicitud"),
     path('prestamos/<int:id>/rechazar/', rechazar_solicitud, name="rechazar_solicitud"),
     
-    #Multas
+    # Multas
     path('multas/', lista_multas, name="lista_multa"),
     path('multas/<int:id>/pagar/', pagar_multa, name="pagar_multa"),
 

@@ -3,16 +3,19 @@
 {% block contenido %}
 <section class="recent-section">
     <div class="section-header">
-        <h2>Libros</h2>
-        <a href="{% url 'crear_libros' %}" class="btn-add">+ Nuevo Libro</a>
+        <h2>Catálogo de Libros</h2>
+        {% if user.is_authenticated and "Bodeguero" in user.groups.all.0.name or user.is_superuser %}
+        <a href="{% url 'crear_libros' %}" class="btn-add">➕ Nuevo Libro</a>
+        {% endif %}
     </div>
     <table>
         <thead>
             <tr>
                 <th>Imagen</th>
-                <th>Titulo</th>
+                <th>Título</th>
                 <th>Autor</th>
-                <th>Disponible</th>
+                <th>Estado</th>
+                <th>Acción</th>
             </tr>
         </thead>
         <tbody>
@@ -21,24 +24,36 @@
                 <td>
                     {% if libro.imagen %}
                     <img src="{{ libro.imagen.url }}" alt="{{ libro.titulo }}"
-                        style="max-height: 100px; max-width: 50px;">
+                        style="max-height: 80px; border-radius: 5px;">
                     {% else %}
-                    No Ingresada
+                    <div
+                        style="width: 50px; height: 70px; background: #222; border: 1px dashed #444; font-size: 0.6em; display: flex; align-items: center; text-align: center;">
+                        Sin Imagen</div>
                     {% endif %}
                 </td>
                 <td>{{ libro.titulo }}</td>
-                <td>{{ libro.autor }}</td>
+                <td>{{ libro.autor.nombre }} {{ libro.autor.apellido }}</td>
                 <td>
-                    {% if libro.disponible %}
-                    <span class="status available">Disponible</span>
+                    {% if libro.esta_disponible %}
+                    <span class="status available">Disponible ({{ libro.disponibles }})</span>
                     {% else %}
-                    <span class="status borrowed">Prestado</span>
+                    <span class="status borrowed">Agotado</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if libro.esta_disponible %}
+                    <a href="{% url 'crear_prestamo' %}?libro_id={{ libro.id }}" class="btn-add"
+                        style="font-size: 0.8em; padding: 5px 10px;">
+                        Solicitar
+                    </a>
+                    {% else %}
+                    -
                     {% endif %}
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="3" style="text-align: center;">No hay libros registrados.</td>
+                <td colspan="5" style="text-align: center;">No hay libros registrados.</td>
             </tr>
             {% endfor %}
         </tbody>

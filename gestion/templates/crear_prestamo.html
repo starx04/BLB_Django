@@ -11,21 +11,28 @@
     <select id="id_libro" name="libro" required>
         <option value="">--Seleccione un Libro--</option>
         {% for libro in libros %}
-        <option value="{{ libro.id }}">{{ libro.titulo }}</option>
+        <option value="{{ libro.id }}" {% if libro.id==libro_preseleccionado %}selected{% endif %}>{{ libro.titulo }}
+        </option>
         {% endfor %}
     </select>
 
     <label for="id_usuario">Usuario</label>
     <select id="id_usuario" name="usuario" required>
+        {% if es_personal %}
         <option value="">--Seleccione un Usuario--</option>
         {% for usuario in usuarios %}
         <option value="{{ usuario.id }}">{{ usuario.username }}</option>
         {% endfor %}
+        {% else %}
+        <option value="{{ user.id }}" selected>{{ user.username }}</option>
+        {% endif %}
     </select>
 
     <label for="id_fecha_prestamo">Fecha Préstamo</label>
     <input type="date" id="id_fecha_prestamo" name="fecha_prestamo" value="{{ fecha }}" required>
 
-    <button type="submit">Crear Préstamo</button>
+    <button type="submit" class="btn-add" style="width: 100%; border: none; margin-top: 15px;">
+        {% if es_personal %}Confirmar Préstamo Directo{% else %}Enviar Solicitud de Préstamo{% endif %}
+    </button>
 </form>
 {% endblock %}

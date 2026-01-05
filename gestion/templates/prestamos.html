@@ -1,41 +1,34 @@
 {% extends "index.html" %}
 
 {% block contenido %}
-<section class="recent-section">
+<!-- SECCIÓN 1: SOLICITUDES PENDIENTES -->
+<section class="recent-section" style="margin-bottom: 2rem;">
     <div class="section-header">
-        <h2>Préstamos</h2>
-        <a href="{% url 'crear_prestamo' %}" class="btn-add">+ Nuevo Préstamo</a>
+        <h2 style="color: var(--neon-purple);">📢 Solicitudes de Préstamo</h2>
+        <a href="{% url 'crear_prestamo' %}" class="btn-add">➕ Nueva Solicitud</a>
     </div>
     <table>
         <thead>
             <tr>
                 <th>Libro</th>
                 <th>Usuario</th>
-                <th>Fecha Préstamo</th>
-                <th>Fecha Máx</th>
-                <th>Devolución</th>
+                <th>Fecha Solicitud</th>
                 <th>Estado</th>
-                <th>Días Retraso</th>
-                <th>Multa</th>
                 <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for prestamo in prestamos %}
+            {% if prestamo.estado == 'solicitado' or prestamo.estado == 'rechazado' %}
             <tr>
                 <td>{{ prestamo.libro }}</td>
-                <td>{{ prestamo.usuario }}</td>
+                <td>{{ prestamo.usuario.username }}</td>
                 <td>{{ prestamo.fecha }}</td>
-                <td>{{ prestamo.fecha_max|default_if_none:"-" }}</td>
-                <td>{{ prestamo.fecha_devolucion|default_if_none:"Pending" }}</td>
                 <td>
-                    <span
-                        class="status {% if prestamo.estado == 'prestado' %}available{% elif prestamo.estado == 'solicitado' %}borrowed{% else %}returned{% endif %}">
+                    <span class="status {% if prestamo.estado == 'solicitado' %}borrowed{% else %}returned{% endif %}">
                         {{ prestamo.get_estado_display }}
                     </span>
                 </td>
-                <td>{{ prestamo.dias_retraso }}</td>
-                <td>{% if prestamo.Multa.exists %}⚠️ Sí{% else %}No{% endif %}</td>
                 <td>
                     {% if prestamo.estado == 'solicitado' %}
                     {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name %}
@@ -56,42 +49,90 @@
                     {% else %}
                     <span style="color: #666; font-style: italic;">Esperando aprobación</span>
                     {% endif %}
+                    {% else %}
+                    -
                     {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center;">No hay solicitudes.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
 
+<!-- SECCIÓN 2: PRÉSTAMOS ACTIVOS Y FINALIZADOS -->
+<section class="recent-section">
+    <div class="section-header">
+        <h2 style="color: var(--neon-blue);">📚 Préstamos Realizados / Activos</h2>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Libro</th>
+                <th>Usuario</th>
+                <th>Fecha Préstamo</th>
+                <th>Fecha Máx</th>
+                <th>Devolución</th>
+                <th>Estado</th>
+                <th>Multa</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prestamo in prestamos %}
+            {% if prestamo.estado != 'solicitado' and prestamo.estado != 'rechazado' %}
+            <tr>
+                <td>{{ prestamo.libro.titulo }}</td>
+                <td>{{ prestamo.usuario.username }}</td>
+                <td>{{ prestamo.fecha }}</td>
+                <td>{{ prestamo.fecha_max|default_if_none:"-" }}</td>
+                <td>{{ prestamo.fecha_devolucion|default_if_none:"En uso" }}</td>
+                <td>
+                    <span class="status {% if prestamo.estado == 'prestado' %}available{% else %}returned{% endif %}">
+                        {{ prestamo.get_estado_display }}
+                    </span>
+                </td>
+                <td>{% if prestamo.Multa.exists %}⚠️ Sí{% else %}No{% endif %}</td>
+                <td>
                     {% if prestamo.estado == 'prestado' %}
                     {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name %}
-                    <div style="display: flex; gap: 5px;">
+                    <div style="display: flex; gap: 5px; align-items: center;">
                         <form action="{% url 'finalizar_prestamo' prestamo.id %}" method="post"
-                            style="display:flex; flex-direction:column; gap:2px;">
+                            style="display:flex; gap:2px;">
                             {% csrf_token %}
-                            <select name="tipo_dano" style="background: #222; color: #fff; border: 1px solid #444;">
+                            <select name="tipo_dano"
+                                style="background: #222; color: #fff; border: 1px solid #444; font-size: 0.8em;">
                                 <option value="">Buen Estado</option>
                                 <option value="d">Con Daños</option>
                                 <option value="p">Pérdida Total</option>
                             </select>
-                            <input type="number" name="monto_dano" placeholder="Monto ($)"
-                                style="width: 80px; background: #222; color: #fff; border: 1px solid #444;">
-                            <button type="submit" style="background: var(--neon-blue); color: black;">Finalizar</button>
+                            <button type="submit"
+                                style="background: var(--neon-blue); color: black; border:none; padding: 4px 8px; border-radius: 4px; cursor:pointer;">Finalizar</button>
                         </form>
                         {% if prestamo.renovaciones < 3 %} <form action="{% url 'renovar_prestamo' prestamo.id %}"
                             method="post">
                             {% csrf_token %}
-                            <button type="submit" style="background: var(--neon-purple); color: white;">Renovar</button>
+                            <button type="submit"
+                                style="background: var(--neon-purple); border:none; color: white; padding: 4px 8px; border-radius: 4px; cursor:pointer;">Renovar</button>
                             </form>
                             {% endif %}
                     </div>
                     {% else %}
                     <span style="color: var(--neon-green);">Préstamo Activo</span>
                     {% endif %}
+                    {% else %}
+                    <span style="color: #666;">Sin acciones</span>
                     {% endif %}
                 </td>
             </tr>
-            {% empty %}
-            <tr>
-                <td colspan="9" style="text-align: center;">No hay préstamos para mostrar.</td>
-            </tr>
+            {% endif %}
             {% endfor %}
         </tbody>
     </table>
+</section>
 </section>
 {% endblock %}
