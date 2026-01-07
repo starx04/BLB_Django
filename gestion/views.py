@@ -13,7 +13,7 @@ from .models import Libro, Prestamos, Multa, Autor, RegistroAuditoria
 
 # --- DECORADORES DE ROLES ---
 def es_admin(user):
-    return user.is_superuser
+    return user.is_superuser or user.groups.filter(name='Administrador').exists()
 
 def es_bibliotecario(user):
     return user.groups.filter(name='Bibliotecario').exists() or user.is_superuser
@@ -260,13 +260,34 @@ def pagar_multa(request, id):
 @user_passes_test(es_admin)
 @login_required
 def panel_administracion(request):
-    audit_logs = RegistroAuditoria.objects.all().order_by('-fecha_hora')[:100]
+    audit_logs = RegistroAuditoria.objects.all().order_by('-fecha_hora')[:15]
     usuarios = User.objects.all()
     context = {
         'audit_logs': audit_logs,
         'usuarios': usuarios,
     }
     return render(request, 'admin_panel.html', context)
+
+@user_passes_test(es_admin)
+@login_required
+def ver_logs(request):
+    """Vista detallada de todos los logs del sistema."""
+    logs = RegistroAuditoria.objects.all().order_by('-fecha_hora')
+    
+    # Filtros opcionales
+    accion = request.GET.get('accion')
+    usuario = request.GET.get('usuario')
+    
+    if accion:
+        logs = logs.filter(accion=accion)
+    if usuario:
+        logs = logs.filter(usuario__username__icontains=usuario)
+        
+    context = {
+        'logs': logs,
+        'acciones': RegistroAuditoria.ACCIONES,
+    }
+    return render(request, 'logs.html', context)
 
 @user_passes_test(es_admin)
 @login_required

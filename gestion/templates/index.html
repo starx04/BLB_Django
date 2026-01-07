@@ -297,9 +297,13 @@
                 <span>Mis Multas</span>
             </a>
 
-            {% if user.is_superuser %}
+            {% if user.is_superuser or user.groups.all.0.name == 'Administrador' or 'Administrador' in
+            user.groups.all|join:"," %}
             <a href="{% url 'panel_administracion' %}" class="menu-item" style="border: 1px solid var(--neon-red);">
                 <span style="color: var(--neon-red);">🛠 Panel Admin</span>
+            </a>
+            <a href="{% url 'ver_logs' %}" class="menu-item" style="border: 1px solid var(--neon-blue);">
+                <span style="color: var(--neon-blue);">📜 Auditoría</span>
             </a>
             {% endif %}
 

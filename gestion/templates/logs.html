@@ -1,0 +1,107 @@
+{% extends "index.html" %}
+
+{% block contenido %}
+<div class="logs-container" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
+    <div class="header-glass"
+        style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 1.5rem; margin-bottom: 2rem; border: 1px solid rgba(255, 255, 255, 0.2); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 style="margin: 0; color: #fff; font-size: 1.8rem; letter-spacing: 1px;">SISTEMA DE AUDITORÍA</h1>
+            <p style="margin: 5px 0 0; color: #cbd5e0; font-size: 0.9rem;">Registro cronológico de actividades y accesos
+            </p>
+        </div>
+        <div class="actions">
+            <a href="{% url 'reporte_auditoria_pdf' %}" class="btn-premium"
+                style="background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%); color: white; padding: 0.8rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: bold; transition: transform 0.2s; display: inline-block;">
+                📄 Exportar PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-glass"
+        style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; border: 1px solid rgba(255, 255, 255, 0.1);">
+        <form method="GET" style="display: flex; gap: 1rem; align-items: flex-end;">
+            <div style="flex: 1;">
+                <label style="display: block; color: #a0aec0; font-size: 0.8rem; margin-bottom: 5px;">Usuario</label>
+                <input type="text" name="usuario" value="{{ request.GET.usuario }}" placeholder="Buscar por username..."
+                    style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px; border-radius: 6px;">
+            </div>
+            <div style="flex: 1;">
+                <label style="display: block; color: #a0aec0; font-size: 0.8rem; margin-bottom: 5px;">Acción</label>
+                <select name="accion"
+                    style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px; border-radius: 6px;">
+                    <option value="">Todas las acciones</option>
+                    {% for key, label in acciones %}
+                    <option value="{{ key }}" {% if request.GET.accion==key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit"
+                style="background: #4a5568; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s;">
+                Filtrar
+            </button>
+            <a href="{% url 'ver_logs' %}"
+                style="color: #cbd5e0; text-decoration: none; font-size: 0.9rem; margin-bottom: 10px;">Limpiar</a>
+        </form>
+    </div>
+
+    <!-- Tabla de Logs -->
+    <div class="table-responsive"
+        style="overflow-x: auto; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+        <table style="width: 100%; border-collapse: collapse; color: #e2e8f0; text-align: left;">
+            <thead>
+                <tr style="background: rgba(255, 255, 255, 0.05);">
+                    <th style="padding: 1.2rem; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">Fecha y Hora</th>
+                    <th style="padding: 1.2rem; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">Usuario</th>
+                    <th style="padding: 1.2rem; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">Acción</th>
+                    <th style="padding: 1.2rem; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">Descripción</th>
+                    <th style="padding: 1.2rem; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr class="log-row"
+                    style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;">
+                    <td style="padding: 1rem; color: #a0aec0; font-size: 0.9rem;">{{ log.fecha_hora|date:"d/m/Y H:i" }}
+                    </td>
+                    <td style="padding: 1rem;">
+                        <span style="font-weight: bold; color: #63b3ed;">{{ log.usuario.username }}</span>
+                        <div style="font-size: 0.75rem; color: #718096;">DNI: {{ log.usuario.perfil.dni|default:"N/A" }}
+                        </div>
+                    </td>
+                    <td style="padding: 1rem;">
+                        <span class="badge" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; 
+                            {% if 'inicio' in log.accion %} background: #2f855a; color: #c6f6d5;
+                            {% elif 'cierre' in log.accion %} background: #718096; color: #edf2f7;
+                            {% elif 'crear' in log.accion %} background: #2b6cb0; color: #bee3f8;
+                            {% elif 'multa' in log.accion %} background: #c53030; color: #fed7d7;
+                            {% else %} background: #4a5568; color: #e2e8f0; {% endif %}">
+                            {{ log.get_accion_display }}
+                        </span>
+                    </td>
+                    <td style="padding: 1rem; font-size: 0.9rem; max-width: 300px;">{{ log.descripcion }}</td>
+                    <td style="padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #718096;">{{
+                        log.ip_address }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="padding: 3rem; text-align: center; color: #718096;">No hay registros
+                        disponibles.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .log-row:hover {
+        background: rgba(255, 255, 255, 0.03) !important;
+    }
+
+    .btn-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(49, 130, 206, 0.4);
+    }
+</style>
+{% endblock %}

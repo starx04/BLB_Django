@@ -37,6 +37,7 @@ urlpatterns = [
 
     # Admin Panel
     path('admin_panel/', panel_administracion, name="panel_administracion"),
+    path('logs/', ver_logs, name="ver_logs"),
     path('admin_panel/empleado/nuevo/', crear_empleado, name="crear_empleado"),
 
     # Reportes PDF

@@ -246,6 +246,9 @@ class RegistroAuditoria(models.Model):
         ('pagar_multa', 'Pagar Multa'),
         ('crear_libro', 'Crear Libro'),
         ('crear_autor', 'Crear Autor'),
+        ('crear_usuario', 'Crear Usuario'),
+        ('inicio_sesion', 'Inicio de Sesión'),
+        ('cierre_sesion', 'Cierre de Sesión'),
     )
     
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='acciones_realizadas')

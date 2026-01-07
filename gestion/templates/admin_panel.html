@@ -37,12 +37,15 @@
             </table>
         </div>
 
-        <!-- Bloque Auditoría -->
         <div>
             <div class="section-header">
-                <h3>Últimas Acciones</h3>
-                <a href="{% url 'reporte_auditoria_pdf' %}" class="btn-add"
-                    style="background: #34495e; font-size: 0.8em;">📄 PDF Auditoría</a>
+                <h3>Recientes de Auditoría</h3>
+                <div>
+                    <a href="{% url 'ver_logs' %}" class="btn-add"
+                        style="background: #4a5568; font-size: 0.8em; margin-right: 5px;">👁️ Ver Todos</a>
+                    <a href="{% url 'reporte_auditoria_pdf' %}" class="btn-add"
+                        style="background: #34495e; font-size: 0.8em;">📄 PDF</a>
+                </div>
             </div>
             <table>
                 <thead>
