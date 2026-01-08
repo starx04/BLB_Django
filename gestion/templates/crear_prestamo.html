@@ -16,20 +16,58 @@
         {% endfor %}
     </select>
 
-    <label for="id_usuario">Usuario</label>
+    <label for="id_usuario">Usuario Solicitante</label>
+    {% if es_personal %}
     <select id="id_usuario" name="usuario" required>
-        {% if es_personal %}
         <option value="">--Seleccione un Usuario--</option>
         {% for usuario in usuarios %}
         <option value="{{ usuario.id }}">{{ usuario.username }}</option>
         {% endfor %}
-        {% else %}
-        <option value="{{ user.id }}" selected>{{ user.username }}</option>
-        {% endif %}
     </select>
+    {% else %}
+    <div
+        style="padding: 12px; background: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.2); border-radius: 8px; color: var(--neon-blue); font-weight: bold; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.2em;">👤</span> {{ user.username }} (Tú)
+    </div>
+    {% endif %}
 
-    <label for="id_fecha_prestamo">Fecha Préstamo</label>
-    <input type="date" id="id_fecha_prestamo" name="fecha_prestamo" value="{{ fecha }}" required>
+    <label for="id_fecha_prestamo">Fecha de Préstamo</label>
+    <input type="date" id="id_fecha_prestamo" name="fecha_prestamo" value="{{ fecha }}" class="form-control"
+        style="background: #111; color: #fff; border: 1px solid #333; padding: 10px; width: 100%; border-radius: 4px;"
+        required>
+
+    <div
+        style="margin-top: 15px; padding: 15px; background: rgba(0,255,187,0.05); border-radius: 8px; border: 1px dashed var(--neon-green);">
+        <p style="margin: 0; font-size: 0.95em;">
+            <strong style="color: var(--neon-green);">Fecha de Devolución Estimada:</strong><br>
+            <span id="fecha_devolucion_preview"
+                style="font-size: 1.2em; font-weight: bold; color: #fff;">Calculando...</span>
+            <br><small style="color: #888;">(Basado en el plazo de 7 días)</small>
+        </p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const inputFecha = document.getElementById('id_fecha_prestamo');
+            const previewDevolucion = document.getElementById('fecha_devolucion_preview');
+            const diasPrestamo = 7;
+
+            function actualizarDevolucion() {
+                const fechaStr = inputFecha.value;
+                if (fechaStr) {
+                    const partes = fechaStr.split('-');
+                    const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
+                    fecha.setDate(fecha.getDate() + diasPrestamo);
+
+                    const opciones = { day: '2-digit', month: 'long', year: 'numeric' };
+                    previewDevolucion.innerText = fecha.toLocaleDateString('es-ES', opciones);
+                }
+            }
+
+            inputFecha.addEventListener('change', actualizarDevolucion);
+            actualizarDevolucion();
+        });
+    </script>
 
     <button type="submit" class="btn-add" style="width: 100%; border: none; margin-top: 15px;">
         {% if es_personal %}Confirmar Préstamo Directo{% else %}Enviar Solicitud de Préstamo{% endif %}

@@ -30,9 +30,11 @@
                     </span>
                 </td>
                 <td>
-                    {% if prestamo.estado == 'solicitado' %}
-                    {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name %}
-                    <div style="display: flex; gap: 5px;">
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        {% if prestamo.estado == 'solicitado' %}
+                        {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name or "Administrador" in
+                        user.groups.all.0.name or "Bibliotecario" in user.groups.all.1.name or "Administrador" in
+                        user.groups.all.1.name %}
                         <form action="{% url 'aceptar_solicitud' prestamo.id %}" method="post">
                             {% csrf_token %}
                             <button type="submit"
@@ -45,13 +47,15 @@
                                 style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">❌
                                 Rechazar</button>
                         </form>
+                        <a href="{% url 'editar_prestamo' prestamo.id %}" class="btn-add"
+                            style="padding: 5px 10px; font-size: 0.8em; background: var(--neon-blue);">✏️ Editar</a>
+                        {% else %}
+                        <span style="color: #666; font-style: italic;">Esperando aprobación</span>
+                        {% endif %}
+                        {% else %}
+                        -
+                        {% endif %}
                     </div>
-                    {% else %}
-                    <span style="color: #666; font-style: italic;">Esperando aprobación</span>
-                    {% endif %}
-                    {% else %}
-                    -
-                    {% endif %}
                 </td>
             </tr>
             {% endif %}
@@ -98,9 +102,11 @@
                 </td>
                 <td>{% if prestamo.Multa.exists %}⚠️ Sí{% else %}No{% endif %}</td>
                 <td>
-                    {% if prestamo.estado == 'prestado' %}
-                    {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name %}
-                    <div style="display: flex; gap: 5px; align-items: center;">
+                    {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name or "Administrador" in
+                    user.groups.all.0.name or "Bibliotecario" in user.groups.all.1.name or "Administrador" in
+                    user.groups.all.1.name %}
+                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                        {% if prestamo.estado == 'prestado' %}
                         <form action="{% url 'finalizar_prestamo' prestamo.id %}" method="post"
                             style="display:flex; gap:2px;">
                             {% csrf_token %}
@@ -120,12 +126,12 @@
                                 style="background: var(--neon-purple); border:none; color: white; padding: 4px 8px; border-radius: 4px; cursor:pointer;">Renovar</button>
                             </form>
                             {% endif %}
+                            {% endif %}
+                            <a href="{% url 'editar_prestamo' prestamo.id %}" class="btn-add"
+                                style="padding: 4px 8px; font-size: 0.8em; background: #555;">✏️ Editar</a>
                     </div>
                     {% else %}
-                    <span style="color: var(--neon-green);">Préstamo Activo</span>
-                    {% endif %}
-                    {% else %}
-                    <span style="color: #666;">Sin acciones</span>
+                    <span style="color: var(--neon-green);">{{ prestamo.get_estado_display }}</span>
                     {% endif %}
                 </td>
             </tr>

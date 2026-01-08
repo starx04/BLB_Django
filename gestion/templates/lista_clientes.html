@@ -1,0 +1,62 @@
+{% extends "index.html" %}
+
+{% block contenido %}
+<section class="recent-section">
+    <div class="section-header">
+        <h2 style="color: var(--neon-green);">👤 Gestión de Clientes</h2>
+        <span class="status available">{{ clientes.count }} Registrados</span>
+    </div>
+
+    <table style="margin-top: 2rem;">
+        <thead>
+            <tr>
+                <th>Nombre de Usuario</th>
+                <th>Correo Electrónico</th>
+                <th>Fecha de Registro</th>
+                <th>Estado Multas</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in clientes %}
+            <tr>
+                <td><strong>{{ user.username }}</strong></td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.date_joined|date:"d/m/Y" }}</td>
+                <td>
+                    {% if user.multas_pendientes_count > 0 %}
+                    <span class="status borrowed">Moroso ({{ user.multas_pendientes_count }})</span>
+                    {% else %}
+                    <span class="status available">Al día</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <a href="{% url 'detalle_usuario' user.id %}" class="btn-add"
+                            style="padding: 5px 10px; font-size: 0.8em; background: var(--neon-blue);">👁️ Ver</a>
+
+                        <a href="{% url 'editar_usuario' user.id %}" class="btn-add"
+                            style="padding: 5px 10px; font-size: 0.8em; background: #555;">✏️ Editar</a>
+
+                        {% if user.is_superuser or "Administrador" in user.groups.all.0.name or "Administrador" in
+                        user.groups.all.1.name %}
+                        <form action="{% url 'eliminar_usuario' user.id %}" method="post"
+                            onsubmit="return confirm('¿Está seguro de eliminar a este cliente? Se borrará todo su historial.');"
+                            style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit"
+                                style="background: var(--neon-red); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">🗑️</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center;">No hay clientes registrados en el sistema.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

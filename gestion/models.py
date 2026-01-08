@@ -8,7 +8,7 @@ class Autor(models.Model):
     nombre=models.CharField(max_length=50)
     apellido=models.CharField(max_length=50)
     bibliografia  = models.CharField(max_length=200, blank= True, null= True)
-    imagen = models.ImageField(upload_to='autores/', blank=True, null=True)
+
     
     def __str__(self):
         return f"{self.nombre} {self.apellido} {self.bibliografia}"
@@ -80,6 +80,12 @@ class Prestamos(models.Model):
     def save(self, *args, **kwargs):
         if not self.codigo:
             self.codigo = generar_codigo_unico("PRES")
+        # Si no hay fecha_max, la calculamos automáticamente (según configuración)
+        if not self.fecha_max:
+            if not self.fecha:
+                self.fecha = timezone.now().date()
+            dias = getattr(settings, 'DIAS_PRESTAMO', 7)
+            self.fecha_max = self.fecha + timezone.timedelta(days=dias)
         super().save(*args, **kwargs)
 
     def confirmar(self):
@@ -88,7 +94,8 @@ class Prestamos(models.Model):
             self.estado = 'prestado'
             self.fecha = timezone.now().date()
             if not self.fecha_max:
-                self.fecha_max = self.fecha + timezone.timedelta(days=7)
+                dias = getattr(settings, 'DIAS_PRESTAMO', 7)
+                self.fecha_max = self.fecha + timezone.timedelta(days=dias)
             self.save()
             return True
         return False
@@ -119,9 +126,15 @@ class Prestamos(models.Model):
             self.save()
             
             # CASO 1: PÉRDIDA TOTAL (Excluyente)
-            # Si se perdió, cobramos el valor y terminamos.
             if tipo_multa == 'p':
+                 # Reducimos el stock real del libro ya que no volverá
+                 if self.libro.stock > 0:
+                     self.libro.stock -= 1
+                     self.libro.save()
+                 
                  self.Multa.create(tipo='p', monto=monto_multa)
+                 self.estado = 'multado'
+                 self.save()
                  return 
             
             # CASO 2: CON DAÑOS (Acumulable)
@@ -133,7 +146,9 @@ class Prestamos(models.Model):
             if self.dias_retraso > 0:
                 self.Multa.create(tipo='r')
 
-    def renovar(self, dias=7):
+    def renovar(self, dias=None):
+        if dias is None:
+            dias = getattr(settings, 'DIAS_PRESTAMO', 7)
         if self.estado == 'prestado' and self.renovaciones < 3:
             self.fecha_max += timezone.timedelta(days=dias)
             self.renovaciones += 1
@@ -188,11 +203,19 @@ class Multa(models.Model):
         return False
         
     def save(self, *args, **kwargs):
+        # PROTECCIÓN: Si la multa ya está pagada, no se puede modificar
+        # Excluimos de esta restricción si se pasa 'force_admin=True' (para superusuarios)
+        if self.pk:
+            old_instance = Multa.objects.get(pk=self.pk)
+            if old_instance.pagada and not kwargs.pop('force_admin', False):
+                # Si intentan cambiar algo en una multa pagada, lanzamos error
+                raise PermissionError("No se puede modificar una multa que ya ha sido pagada.")
+
         if not self.codigo:
             self.codigo = generar_codigo_unico("MULT")
-        if self.tipo ==  'r' and  self.monto ==0 :
+        if self.tipo ==  'r' and  self.monto == 0:
             self.monto = self.prestamo.multa_retraso
-        super().save(*args, **kwargs) 
+        super().save(*args, **kwargs)
 
 # Extension del Usuario Django
 from django.db.models.signals import post_save

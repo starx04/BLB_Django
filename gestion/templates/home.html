@@ -36,13 +36,15 @@
 <section class="recent-section">
     <div class="section-header">
         <h3>Últimos Ingresos</h3>
-        {% if user.is_authenticated and "Bodeguero" in user.groups.all.0.name or user.is_superuser %}
+        {% if user.is_authenticated and user.is_superuser or "Bodeguero" in user.groups.all.0.name or "Administrador" in
+        user.groups.all.0.name %}
         <a href="{% url 'crear_libros' %}" class="btn-add">➕ Nuevo Libro</a>
         {% endif %}
     </div>
     <table>
         <thead>
             <tr>
+                <th>Imagen</th>
                 <th>Título</th>
                 <th>Autor</th>
                 <th>Estado</th>
@@ -52,6 +54,16 @@
         <tbody>
             {% for libro in libros_recientes %}
             <tr>
+                <td>
+                    {% if libro.imagen %}
+                    <img src="{{ libro.imagen.url }}" alt="{{ libro.titulo }}"
+                        style="max-height: 50px; border-radius: 4px;">
+                    {% else %}
+                    {% load static %}
+                    <img src="{% static 'images/default_book.png' %}" alt="P"
+                        style="max-height: 50px; border-radius: 4px; opacity: 0.5;">
+                    {% endif %}
+                </td>
                 <td>{{ libro.titulo }}</td>
                 <td>{{ libro.autor.nombre }} {{ libro.autor.apellido }}</td>
                 <td>
@@ -74,7 +86,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4" style="text-align:center;">No hay libros registrados aún.</td>
+                <td colspan="5" style="text-align:center;">No hay libros registrados aún.</td>
             </tr>
             {% endfor %}
         </tbody>

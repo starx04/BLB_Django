@@ -43,12 +43,14 @@
                 <td>{{ p.fecha|date:"d/m/Y" }}</td>
                 <td>{{ p.fecha_devolucion|date:"d/m/Y"|default:"-" }}</td>
                 <td>
-                    {% if p.estado == 'activo' %}
-                    <span style="color: yellow;">Leyendo</span>
-                    {% elif p.estado == 'vencido' %}
-                    <span style="color: red;">Vencido</span>
+                    {% if p.estado == 'prestado' %}
+                    <span style="color: #00f3ff;">En Préstamo</span>
+                    {% elif p.estado == 'multado' %}
+                    <span style="color: #ff0055;">Vencido / Multado</span>
+                    {% elif p.estado == 'solicitado' %}
+                    <span style="color: #ffaa00;">Solicitado</span>
                     {% else %}
-                    <span style="color: #0f0;">Devuelto</span>
+                    <span style="color: #00ff9d;">Devuelto</span>
                     {% endif %}
                 </td>
             </tr>

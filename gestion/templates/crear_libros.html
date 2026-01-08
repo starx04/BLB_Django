@@ -2,7 +2,7 @@
 
 {% block contenido %}
 <div class="section-header">
-    <h2>Crear Libro</h2>
+    <h2>{% if libro_obj %}Editar Libro: {{ libro_obj.titulo }}{% else %}Registrar Nuevo Libro{% endif %}</h2>
 </div>
 
 <!-- Sección de Búsqueda Rápida por ISBN -->
@@ -29,67 +29,93 @@
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
-    <!-- Input oculto para confirmar duplicado -->
-    {% if advertencia_duplicado %}
-    <input type="hidden" name="confirmar_duplicado" value="true">
+    <!-- Info Banner si viene de API -->
+    {% if prefill.is_api %}
+    <div
+        style="background: rgba(0, 243, 255, 0.1); border: 1px solid var(--neon-blue); padding: 10px; border-radius: 8px; margin-bottom: 1.5rem;">
+        <p style="color: var(--neon-blue); margin: 0; font-size: 0.9em;">
+            📌 <strong>Datos de OpenLibrary cargados:</strong> Los campos básicos están protegidos para mantener la
+            integridad de la fuente oficial.
+        </p>
+    </div>
     {% endif %}
 
-    <label for="id_isbn">ISBN (Opcional)</label>
-    <input type="text" id="id_isbn" name="isbn" value="{{ request.POST.isbn|default:'' }}">
+    <label for="id_isbn">ISBN</label>
+    <input type="text" id="id_isbn" name="isbn" value="{{ prefill.isbn|default:'' }}" {% if prefill.is_api %}readonly
+        style="background: rgba(255,255,255,0.02); color: #888;" {% endif %}>
+
     <!-- URL oculta para la imagen de la API -->
-    <input type="hidden" id="id_cover_url" name="cover_url">
+    <input type="hidden" id="id_cover_url" name="cover_url" value="{{ prefill.cover_url|default:'' }}">
 
-    <label for="id_titulo">Titulo</label>
-    <input type="text" id="id_titulo" name="titulo" required value="{{ request.POST.titulo|default:'' }}">
+    <label for="id_titulo">Título del Libro</label>
+    <input type="text" id="id_titulo" name="titulo" required value="{{ prefill.titulo|default:'' }}" {% if
+        prefill.is_api %}readonly style="background: rgba(255,255,255,0.02); color: #888;" {% endif %}>
 
-    <label for="id_autor_texto">Autor (Nombre Completo)</label>
+    <label for="id_autor_texto">Autor</label>
     <div style="display: flex; gap: 5px; margin-bottom: 1rem;">
-        <input type="text" id="id_autor_texto" name="autor_texto" placeholder="Escribe el nombre del autor..."
-            value="{{ request.POST.autor_texto|default:'' }}">
+        <input type="text" id="id_autor_texto" name="autor_texto" placeholder="Nombre del autor..."
+            value="{{ prefill.autor_texto|default:'' }}" {% if prefill.is_api %}readonly
+            style="background: rgba(255,255,255,0.02); color: #888; flex: 1;" {% else %}style="flex: 1;" {% endif %}>
+
+        {% if not prefill.is_api %}
         <select name="autor_select" id="id_autor_select" onchange="copiarAutor()" style="width: 30%;">
             <option value="">-- Existentes --</option>
             {% for autor in autores %}
-            <option value="{{ autor.nombre }} {{ autor.apellido }}">
-                {{ autor.nombre }} {{ autor.apellido }}
-            </option>
+            <option value="{{ autor.nombre }} {{ autor.apellido }}">{{ autor.nombre }} {{ autor.apellido }}</option>
             {% endfor %}
         </select>
+        {% endif %}
     </div>
 
-    <div style="margin-bottom: 1rem;">
-        <label for="id_stock">Stock (Cantidad de Copias)</label>
-        <input type="number" id="id_stock" name="stock" value="{{ request.POST.stock|default:'1' }}" min="1" required
-            style="width: 100px;">
+    <div class="card {% if error_stock %}border-neon-red{% endif %}"
+        style="margin-bottom: 1rem; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+        <label for="id_stock" class="{% if error_stock %}text-neon-red{% else %}text-neon-green{% endif %}"
+            style="font-weight: bold;">
+            🔢 Stock de Libros (Obligatorio)
+        </label>
+        <input type="number" id="id_stock" name="stock" value="{{ prefill.stock|default:'1' }}" min="1" required
+            class="{% if error_stock %}border-neon-red shadow-neon-red{% endif %}"
+            style="width: 100%; margin-top: 5px;">
+        {% if error_stock %}
+        <p style="color: var(--neon-red); font-size: 0.8em; margin-top: 5px;">⚠️ Por favor, ingresa una cantidad válida
+            de ejemplares.</p>
+        {% endif %}
     </div>
 
     <div style="margin-bottom: 1rem;">
         <label for="id_categoria">Categoría</label>
         <select name="categoria" id="id_categoria">
-            <option value="">-- Sin Categoría --</option>
+            <option value="">-- Seleccione Categoría (Opcional) --</option>
             {% for cat in categorias %}
-            <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+            <option value="{{ cat.id }}" {% if prefill.categoria|stringformat:"s"==cat.id|stringformat:"s" %}selected{%
+                endif %}>
+                {{ cat.nombre }}
+            </option>
             {% endfor %}
         </select>
     </div>
 
-    <label for="id_bibliografia">Bibliografia</label>
-    <textarea id="id_bibliografia" name="bibliografia" rows="3">{{ request.POST.bibliografia|default:'' }}</textarea>
+    <label for="id_bibliografia">Descripción / Bibliografía</label>
+    <textarea id="id_bibliografia" name="bibliografia" rows="3">{{ prefill.bibliografia|default:'' }}</textarea>
 
-    <label for="id_imagen">Imagen: </label>
-    <!-- Contenedor para previsualizar imagen de API -->
-    <div id="preview_container" style="display: none; margin-bottom: 1rem;">
-        <p>Imagen desde API:</p>
-        <img id="img_preview" src="" style="max-width: 100px; border: 1px solid #ccc;">
+    <!-- Previsualización de Imagen -->
+    <div id="preview_container" class="{% if prefill.cover_url %}block{% else %}hidden{% endif %}"
+        style="margin: 1rem 0; padding: 1rem; border: 1px solid var(--neon-blue); border-radius: 8px; background: rgba(0, 243, 255, 0.05);">
+        <p style="color: var(--neon-blue); font-weight: bold; margin-bottom: 0.5rem;">📸 Portada Detectada:</p>
+        <img id="img_preview" src="{{ prefill.cover_url|default:'' }}"
+            style="max-width: 150px; border-radius: 8px; box-shadow: 0 0 15px var(--neon-blue);">
     </div>
+
+    <label for="id_imagen">Subir imagen propia (Sustituye a la de API): </label>
     <input type="file" id="id_imagen" name="imagen" accept="image/*">
     <br><br>
 
     <div style="display: flex; gap: 1rem;">
-        <button type="submit" name="accion" value="guardar">Guardar Libro</button>
-        {% if advertencia_duplicado %}
-        <a href="{% url 'crear_libros' %}" class="button"
-            style="background-color: #f44336; padding: 0.8rem; text-decoration: none; color: white; border-radius: 4px;">Cancelar</a>
-        {% endif %}
+        <button type="submit" style="background: var(--neon-green); color: black;">
+            {% if libro_obj %}🚀 Guardar Cambios{% else %}🚀 Registrar Libro{% endif %}
+        </button>
+        <a href="{% url 'lista_libros' %}"
+            style="padding: 1rem; text-decoration: none; color: #888; border: 1px solid #333; border-radius: 8px; text-align: center; flex: 1;">Cancelar</a>
     </div>
 </form>
 
@@ -103,9 +129,10 @@
         }
     }
 
-    // Funcionalidad AJAX simple para buscar ISBN sin recargar
+    // Funcionalidad AJAX para buscar ISBN y bloquear campos
     async function buscarISBN() {
-        const isbn = document.getElementById('api_isbn').value;
+        const isbnInput = document.getElementById('api_isbn');
+        const isbn = isbnInput.value;
         if (!isbn) return;
 
         const btn = document.querySelector('button[onclick="buscarISBN()"]');
@@ -113,32 +140,51 @@
         btn.disabled = true;
 
         try {
-            // Usamos la misma lógica del servicio pero llamada asíncrona simulada o endpoint API
-            // Para simplificar, haremos fetch directo a OpenLibrary cliente
             const response = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
             const data = await response.json();
             const bookData = data[`ISBN:${isbn}`];
 
             if (bookData) {
-                document.getElementById('id_isbn').value = isbn;
-                document.getElementById('id_titulo').value = bookData.title;
+                const inputs = {
+                    isbn: document.getElementById('id_isbn'),
+                    titulo: document.getElementById('id_titulo'),
+                    autor: document.getElementById('id_autor_texto')
+                };
 
-                if (bookData.authors && bookData.authors.length > 0) {
-                    document.getElementById('id_autor_texto').value = bookData.authors[0].name;
-                }
+                inputs.isbn.value = isbn;
+                inputs.titulo.value = bookData.title;
+                if (bookData.authors) inputs.autor.value = bookData.authors[0].name;
+
+                // Bloquear campos
+                Object.values(inputs).forEach(input => {
+                    input.readOnly = true;
+                    input.style.background = "rgba(255,255,255,0.02)";
+                    input.style.color = "#888";
+                });
 
                 if (bookData.cover) {
-                    const coverUrl = bookData.cover.medium || bookData.cover.large;
+                    let coverUrl = bookData.cover.large || bookData.cover.medium;
+                    if (coverUrl.startsWith('http:')) coverUrl = coverUrl.replace('http:', 'https:');
                     document.getElementById('id_cover_url').value = coverUrl;
                     document.getElementById('img_preview').src = coverUrl;
                     document.getElementById('preview_container').style.display = 'block';
                 }
+
+                // Mostrar banner de API
+                const banner = document.createElement('div');
+                banner.innerHTML = `
+                    <div style="background: rgba(0, 243, 255, 0.1); border: 1px solid var(--neon-blue); padding: 10px; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <p style="color: var(--neon-blue); margin: 0; font-size: 0.9em;">
+                            ✅ <strong>Datos vinculados con OpenLibrary:</strong> Los campos se han bloqueado para asegurar la veracidad de la información.
+                        </p>
+                    </div>`;
+                document.querySelector('form').prepend(banner);
+
             } else {
-                alert("No se encontró libro con ese ISBN en OpenLibrary.");
+                alert("No se encontró el libro. Puedes ingresarlo manualmente.");
             }
         } catch (error) {
-            console.error(error);
-            alert("Error al conectar con el servicio.");
+            alert("Error consultando la API.");
         } finally {
             btn.textContent = "Buscar";
             btn.disabled = false;

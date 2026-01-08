@@ -37,17 +37,31 @@
                 </td>
                 <td>{{ multa.fecha }}</td>
                 <td>
-                    {% if not multa.pagada %}
-                    <form action="{% url 'pagar_multa' multa.id %}" method="post" style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit"
-                            style="background: var(--neon-green); font-size: 0.8em; padding: 5px 10px; border: none; cursor: pointer; border-radius: 3px;">
-                            💰 Pagar
-                        </button>
-                    </form>
-                    {% else %}
-                    <span style="color: #888;">Pagada por: {{ multa.pagada_por.username }}</span>
-                    {% endif %}
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        {% if not multa.pagada %}
+                        <form action="{% url 'pagar_multa' multa.id %}" method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit"
+                                style="background: var(--neon-green); font-size: 0.8em; padding: 5px 10px; border: none; cursor: pointer; border-radius: 3px;">
+                                💰 Pagar
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name or "Administrador" in
+                        user.groups.all.0.name or "Bibliotecario" in user.groups.all.1.name or "Administrador" in
+                        user.groups.all.1.name %}
+                        {% if not multa.pagada or user.is_superuser or "Administrador" in user.groups.all.0.name or
+                        "Administrador" in user.groups.all.1.name %}
+                        <a href="{% url 'editar_multa' multa.id %}" class="btn-add"
+                            style="padding: 5px 10px; font-size: 0.8em; background: #555;">✏️ Editar</a>
+                        {% endif %}
+                        {% endif %}
+
+                        {% if multa.pagada %}
+                        <span style="color: #888; font-size: 0.8em;">Pagada por: {{ multa.pagada_por.username }}</span>
+                        {% endif %}
+                    </div>
                 </td>
             </tr>
             {% empty %}

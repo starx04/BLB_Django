@@ -19,6 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 TITLE = "UTE 2 semestre desarrollo de software"
 
 MULTA = 0.5
+DIAS_PRESTAMO = 7
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/

@@ -1,0 +1,62 @@
+{% extends "index.html" %}
+
+{% block contenido %}
+<section class="recent-section">
+    <div class="section-header">
+        <h2 style="color: var(--neon-blue);">👥 Gestión de Personal</h2>
+        <a href="{% url 'crear_empleado' %}" class="btn-add">➕ Nuevo Empleado</a>
+    </div>
+
+    <table style="margin-top: 2rem;">
+        <thead>
+            <tr>
+                <th>Nombre de Usuario</th>
+                <th>Correo Electrónico</th>
+                <th>Roles / Grupos</th>
+                <th>Fecha de Registro</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in personal %}
+            <tr>
+                <td><strong>{{ user.username }}</strong> {% if user.is_superuser %}<span
+                        style="color: var(--neon-blue); font-size: 0.7em;">(SUPERUSER)</span>{% endif %}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                    {% for group in user.groups.all %}
+                    <span class="status available" style="padding: 2px 8px; font-size: 0.75em;">{{ group.name }}</span>
+                    {% empty %}
+                    <span class="status returned" style="padding: 2px 8px; font-size: 0.75em;">Sin Rol</span>
+                    {% endfor %}
+                </td>
+                <td>{{ user.date_joined|date:"d/m/Y" }}</td>
+                <td>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <a href="{% url 'editar_usuario' user.id %}" class="btn-add"
+                            style="padding: 5px 10px; font-size: 0.8em; background: var(--neon-blue);">✏️ Editar</a>
+
+                        {% if not user.id == request.user.id and not user.is_superuser %}
+                        <form action="{% url 'eliminar_usuario' user.id %}" method="post"
+                            onsubmit="return confirm('¿Está seguro de eliminar a este miembro del personal? Esta acción no se puede deshacer.');"
+                            style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit"
+                                style="background: var(--neon-red); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">🗑️
+                                Eliminar</button>
+                        </form>
+                        {% else %}
+                        <span style="color: #666; font-style: italic; font-size: 0.8em;">Protegido</span>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center;">No hay personal registrado fuera de los clientes.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

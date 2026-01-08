@@ -65,23 +65,28 @@
                     <td style="padding: 1rem; color: #a0aec0; font-size: 0.9rem;">{{ log.fecha_hora|date:"d/m/Y H:i" }}
                     </td>
                     <td style="padding: 1rem;">
+                        {% if log.usuario %}
                         <span style="font-weight: bold; color: #63b3ed;">{{ log.usuario.username }}</span>
                         <div style="font-size: 0.75rem; color: #718096;">DNI: {{ log.usuario.perfil.dni|default:"N/A" }}
                         </div>
+                        {% else %}
+                        <span style="color: #666; font-style: italic;">Usuario Eliminado</span>
+                        {% endif %}
                     </td>
                     <td style="padding: 1rem;">
-                        <span class="badge" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; 
-                            {% if 'inicio' in log.accion %} background: #2f855a; color: #c6f6d5;
-                            {% elif 'cierre' in log.accion %} background: #718096; color: #edf2f7;
-                            {% elif 'crear' in log.accion %} background: #2b6cb0; color: #bee3f8;
-                            {% elif 'multa' in log.accion %} background: #c53030; color: #fed7d7;
-                            {% else %} background: #4a5568; color: #e2e8f0; {% endif %}">
+                        <span class="badge 
+                            {% if 'inicio' in log.accion %}badge-inicio
+                            {% elif 'cierre' in log.accion %}badge-cierre
+                            {% elif 'crear' in log.accion %}badge-crear
+                            {% elif 'multa' in log.accion %}badge-multa
+                            {% else %}badge-default{% endif %}">
                             {{ log.get_accion_display }}
                         </span>
                     </td>
                     <td style="padding: 1rem; font-size: 0.9rem; max-width: 300px;">{{ log.descripcion }}</td>
-                    <td style="padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #718096;">{{
-                        log.ip_address }}</td>
+                    <td style="padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #718096;">
+                        {{ log.ip_address }}
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -95,6 +100,39 @@
 </div>
 
 <style>
+    .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        display: inline-block;
+    }
+
+    .badge-inicio {
+        background: #2f855a;
+        color: #c6f6d5;
+    }
+
+    .badge-cierre {
+        background: #718096;
+        color: #edf2f7;
+    }
+
+    .badge-crear {
+        background: #2b6cb0;
+        color: #bee3f8;
+    }
+
+    .badge-multa {
+        background: #c53030;
+        color: #fed7d7;
+    }
+
+    .badge-default {
+        background: #4a5568;
+        color: #e2e8f0;
+    }
+
     .log-row:hover {
         background: rgba(255, 255, 255, 0.03) !important;
     }

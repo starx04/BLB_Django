@@ -66,3 +66,46 @@ class FormularioRegistroExtendido(FormularioCreacionUsuario):
                 perfil_usuario.telefono = self.cleaned_data['telefono']
                 perfil_usuario.save()
         return usuario
+
+class FormularioEdicionUsuario(forms.ModelForm):
+    # Campos adicionales del perfil
+    dni = forms.CharField(max_length=20, required=False, label="DNI / Identificación")
+    direccion = forms.CharField(max_length=200, required=False, label="Dirección")
+    telefono = forms.CharField(max_length=20, required=False, label="Teléfono")
+
+    class Meta:
+        model = Usuario
+        fields = ('username', 'first_name', 'last_name', 'email')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Pre-poblar los campos del perfil si existe
+        if self.instance and hasattr(self.instance, 'perfil'):
+            self.fields['dni'].initial = self.instance.perfil.dni
+            self.fields['direccion'].initial = self.instance.perfil.direccion
+            self.fields['telefono'].initial = self.instance.perfil.telefono
+
+    def clean_dni(self):
+        dni = self.cleaned_data.get('dni')
+        if dni and not dni.isdigit():
+             raise ErrorValidacion("El DNI debe contener solo números.")
+        return dni
+
+    def clean_telefono(self):
+        telefono = self.cleaned_data.get('telefono')
+        if telefono and not telefono.isdigit():
+             raise ErrorValidacion("El teléfono debe contener solo números.")
+        return telefono
+
+    def save(self, commit=True):
+        usuario = super().save(commit=False)
+        if commit:
+            usuario.save()
+            # Actualizar el perfil
+            if hasattr(usuario, 'perfil'):
+                perfil = usuario.perfil
+                perfil.dni = self.cleaned_data.get('dni')
+                perfil.direccion = self.cleaned_data.get('direccion')
+                perfil.telefono = self.cleaned_data.get('telefono')
+                perfil.save()
+        return usuario

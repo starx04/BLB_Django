@@ -1,0 +1,58 @@
+{% extends 'index.html' %}
+
+{% block contenido %}
+<div class="section-header">
+    <h2>Editar Multa: {{ multa.codigo }}</h2>
+</div>
+
+<div class="card"
+    style="padding: 2rem; border: 1px solid #333; border-radius: 8px; background: rgba(255,255,255,0.02);">
+    <p style="color: var(--neon-blue); margin-bottom: 1.5rem;">
+        <strong>Referencia:</strong> Préstamo de "{{ multa.prestamo.libro.titulo }}" por {{
+        multa.prestamo.usuario.username }}
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <label for="id_tipo">Tipo de Multa</label>
+        <select id="id_tipo" name="tipo" required>
+            {% for val, label in multa.TIPOS %}
+            <option value="{{ val }}" {% if val==multa.tipo %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="id_monto" style="margin-top: 1rem; display: block;">Monto ($)</label>
+        <input type="number" step="0.01" id="id_monto" name="monto" value="{{ multa.monto }}" required>
+
+        <div style="margin: 1.5rem 0; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" name="pagada" {% if multa.pagada %}checked{% endif %} style="width: auto;">
+                <span class="{% if multa.pagada %}text-neon-green{% else %}text-neon-red{% endif %}"
+                    style="font-weight: bold;">
+                    Marcar como Pagada
+                </span>
+            </label>
+            {% if multa.pagada %}
+            <p style="font-size: 0.8em; color: #888; margin-top: 5px;">
+                Pagada el {{ multa.fecha_pago|date:"d/m/Y H:i" }} por {{ multa.pagada_por.username }}.
+            </p>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button type="submit" style="background: var(--neon-green); color: #000; font-weight: bold;">Actualizar
+                Multa</button>
+            <a href="{% url 'lista_multa' %}" class="button"
+                style="text-decoration: none; padding: 1rem; background: #333; color: #fff; border-radius: 4px; text-align: center; flex: 1;">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+{% if multa.pagada and not user.is_superuser and not "Administrador" in user.groups.all.0.name %}
+<div style="margin-top: 1rem; color: var(--neon-red); font-weight: bold; text-align: center;">
+    ⚠️ Esta multa ya ha sido pagada. Únicamente un Administrador puede modificarla.
+</div>
+{% endif %}
+
+{% endblock %}

@@ -17,6 +17,7 @@ urlpatterns = [
     # Libros
     path('libros/', lista_libros, name="lista_libros"),
     path('libros/nuevo/', crear_libros, name="crear_libros"),
+    path('libros/<int:id>/editar/', crear_libros, name="editar_libro"),
     
     # Autores
     path('autores/', lista_autores, name="lista_autores"),
@@ -26,6 +27,7 @@ urlpatterns = [
     # Préstamos
     path('prestamos/', lista_prestamos, name="lista_prestamos"),
     path('prestamos/nuevo/', crear_prestamo, name="crear_prestamo"),
+    path('prestamos/<int:id>/editar/', editar_prestamo, name="editar_prestamo"),
     path('prestamos/<int:id>/finalizar/', finalizar_prestamo, name="finalizar_prestamo"),
     path('prestamos/<int:id>/renovar/', renovar_prestamo, name="renovar_prestamo"),
     path('prestamos/<int:id>/aceptar/', aceptar_solicitud, name="aceptar_solicitud"),
@@ -34,11 +36,16 @@ urlpatterns = [
     # Multas
     path('multas/', lista_multas, name="lista_multa"),
     path('multas/<int:id>/pagar/', pagar_multa, name="pagar_multa"),
+    path('multas/<int:id>/editar/', editar_multa, name="editar_multa"),
 
     # Admin Panel
     path('admin_panel/', panel_administracion, name="panel_administracion"),
     path('logs/', ver_logs, name="ver_logs"),
     path('admin_panel/empleado/nuevo/', crear_empleado, name="crear_empleado"),
+    path('admin_panel/personal/', lista_personal, name="lista_personal"),
+    path('admin_panel/clientes/', lista_clientes, name="lista_clientes"),
+    path('panel_administracion/usuario/<int:id>/eliminar/', eliminar_usuario, name="eliminar_usuario"),
+    path('panel_administracion/usuario/<int:id>/editar/', editar_usuario, name="editar_usuario"),
 
     # Reportes PDF
     path('reportes/auditoria/', generar_reporte_auditoria_pdf, name="reporte_auditoria_pdf"),

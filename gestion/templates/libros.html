@@ -4,7 +4,7 @@
 <section class="recent-section">
     <div class="section-header">
         <h2>Catálogo de Libros</h2>
-        {% if user.is_authenticated and "Bodeguero" in user.groups.all.0.name or user.is_superuser %}
+        {% if user.is_superuser or "Bodeguero" in user.groups.all.0.name or "Administrador" in user.groups.all.0.name %}
         <a href="{% url 'crear_libros' %}" class="btn-add">➕ Nuevo Libro</a>
         {% endif %}
     </div>
@@ -24,11 +24,12 @@
                 <td>
                     {% if libro.imagen %}
                     <img src="{{ libro.imagen.url }}" alt="{{ libro.titulo }}"
-                        style="max-height: 80px; border-radius: 5px;">
+                        style="max-height: 80px; border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);">
                     {% else %}
                     <div
-                        style="width: 50px; height: 70px; background: #222; border: 1px dashed #444; font-size: 0.6em; display: flex; align-items: center; text-align: center;">
-                        Sin Imagen</div>
+                        style="width: 60px; height: 80px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #777; border-radius: 5px; border: 1px solid #444;">
+                        <span>Sin Portada</span>
+                    </div>
                     {% endif %}
                 </td>
                 <td>{{ libro.titulo }}</td>
@@ -41,14 +42,21 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if libro.esta_disponible %}
-                    <a href="{% url 'crear_prestamo' %}?libro_id={{ libro.id }}" class="btn-add"
-                        style="font-size: 0.8em; padding: 5px 10px;">
-                        Solicitar
-                    </a>
-                    {% else %}
-                    -
-                    {% endif %}
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        {% if user.is_superuser or "Bodeguero" in user.groups.all.0.name or "Administrador" in
+                        user.groups.all.0.name %}
+                        <a href="{% url 'editar_libro' libro.id %}" class="btn-add"
+                            style="font-size: 0.8em; padding: 5px 10px; background: var(--neon-blue); color: #fff;">
+                            Editar
+                        </a>
+                        {% endif %}
+                        {% if libro.esta_disponible %}
+                        <a href="{% url 'crear_prestamo' %}?libro_id={{ libro.id }}" class="btn-add"
+                            style="font-size: 0.8em; padding: 5px 10px;">
+                            Solicitar
+                        </a>
+                        {% endif %}
+                    </div>
                 </td>
             </tr>
             {% empty %}

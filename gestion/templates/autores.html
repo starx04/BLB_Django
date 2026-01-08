@@ -9,23 +9,17 @@
     <table>
         <thead>
             <tr>
-                <th>Imagen</th>
+            <tr>
                 <th>Nombre</th>
                 <th>Apellido</th>
                 <th>Bibliografía</th>
                 <th>Acciones</th>
             </tr>
+            </tr>
         </thead>
         <tbody>
             {% for autor in autores %}
             <tr>
-                <td>
-                {% if autor.imagen %}
-                    <img src="{{ autor.imagen.url }}" alt="{{ autor.nombre }}" style="max-height: 100px; max-width: 50px;">
-                {% else %}
-                    No Ingresada
-                {% endif %}
-                </td>
                 <td>{{ autor.nombre }}</td>
                 <td>{{ autor.apellido }}</td>
                 <td>{{ autor.bibliografia }}</td>

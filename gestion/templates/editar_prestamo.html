@@ -1,0 +1,58 @@
+{% extends 'index.html' %}
+
+{% block contenido %}
+<div class="section-header">
+    <h2>Editar Préstamo: {{ prestamo.codigo }}</h2>
+</div>
+
+<div class="card"
+    style="padding: 2rem; border: 1px solid #333; border-radius: 8px; background: rgba(255,255,255,0.02);">
+    <form method="post">
+        {% csrf_token %}
+
+        <label for="id_libro">Libro vinculado</label>
+        <select id="id_libro" name="libro" required>
+            {% for libro in libros %}
+            <option value="{{ libro.id }}" {% if libro.id==prestamo.libro.id %}selected{% endif %}>
+                {{ libro.titulo }} (Stock: {{ libro.stock }})
+            </option>
+            {% endfor %}
+        </select>
+
+        <label for="id_usuario">Usuario solicitante</label>
+        <select id="id_usuario" name="usuario" required>
+            {% for usuario in usuarios %}
+            <option value="{{ usuario.id }}" {% if usuario.id==prestamo.usuario.id %}selected{% endif %}>
+                {{ usuario.username }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 1rem;">
+            <div>
+                <label for="id_fecha">Fecha de Inicio</label>
+                <input type="date" id="id_fecha" name="fecha" value="{{ prestamo.fecha|date:'Y-m-d' }}" required>
+            </div>
+            <div>
+                <label for="id_fecha_max">Fecha Máxima de Devolución</label>
+                <input type="date" id="id_fecha_max" name="fecha_max" value="{{ prestamo.fecha_max|date:'Y-m-d' }}"
+                    required>
+            </div>
+        </div>
+
+        <label for="id_estado" style="margin-top: 1rem; display: block;">Estado del Préstamo</label>
+        <select id="id_estado" name="estado" required>
+            {% for val, label in prestamo.ESTADOS %}
+            <option value="{{ val }}" {% if val==prestamo.estado %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button type="submit" style="background: var(--neon-blue); color: #000; font-weight: bold;">Guardar
+                Cambios</button>
+            <a href="{% url 'lista_prestamos' %}" class="button"
+                style="text-decoration: none; padding: 1rem; background: #333; color: #fff; border-radius: 4px; text-align: center; flex: 1;">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

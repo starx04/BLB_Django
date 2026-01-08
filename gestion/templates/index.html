@@ -267,6 +267,59 @@
         button[type="submit"]:hover {
             box-shadow: 0 0 20px var(--neon-blue);
         }
+
+        /* Alert Messages */
+        .message-alert.alert-error {
+            border-color: var(--neon-red);
+            color: var(--neon-red);
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.2);
+        }
+
+        .message-alert.alert-success {
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+            box-shadow: 0 0 15px rgba(0, 255, 157, 0.2);
+        }
+
+        .message-alert.alert-info,
+        .message-alert.alert-debug {
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+        }
+
+        /* Utility Classes */
+        .text-neon-green {
+            color: var(--neon-green);
+        }
+
+        .text-neon-red {
+            color: var(--neon-red);
+        }
+
+        .text-neon-blue {
+            color: var(--neon-blue);
+        }
+
+        .border-neon-red {
+            border: 1px solid var(--neon-red) !important;
+        }
+
+        .border-neon-blue {
+            border: 1px solid var(--neon-blue) !important;
+        }
+
+        .shadow-neon-red {
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2) !important;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .block {
+            display: block !important;
+        }
     </style>
 </head>
 
@@ -297,13 +350,21 @@
                 <span>Mis Multas</span>
             </a>
 
-            {% if user.is_superuser or user.groups.all.0.name == 'Administrador' or 'Administrador' in
-            user.groups.all|join:"," %}
-            <a href="{% url 'panel_administracion' %}" class="menu-item" style="border: 1px solid var(--neon-red);">
-                <span style="color: var(--neon-red);">🛠 Panel Admin</span>
+            {% if user.is_superuser or user.is_staff %}
+            <div
+                style="margin: 1.5rem 0 0.5rem 1rem; color: var(--neon-red); font-size: 0.7rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+                ADMINISTRACION STARAX</div>
+            <a href="{% url 'panel_administracion' %}" class="menu-item">
+                <span>🛠 Dashboard Admin</span>
             </a>
-            <a href="{% url 'ver_logs' %}" class="menu-item" style="border: 1px solid var(--neon-blue);">
-                <span style="color: var(--neon-blue);">📜 Auditoría</span>
+            <a href="{% url 'lista_personal' %}" class="menu-item">
+                <span>👥 Personal</span>
+            </a>
+            <a href="{% url 'lista_clientes' %}" class="menu-item">
+                <span>👤 Clientes</span>
+            </a>
+            <a href="{% url 'ver_logs' %}" class="menu-item">
+                <span>📜 Auditoría</span>
             </a>
             {% endif %}
 
@@ -333,6 +394,24 @@
     </aside>
 
     <main class="main-content">
+        <!-- Bloque de Mensajes (Notificaciones) -->
+        {% if messages %}
+        <div class="messages" style="margin-bottom: 2rem;">
+            {% for message in messages %}
+            <div class="message-alert alert-{{ message.tags }}" style="
+                padding: 1rem;
+                margin-bottom: 1rem;
+                border-radius: 8px;
+                border: 1px solid;
+                background: rgba(0,0,0,0.4);
+                backdrop-filter: blur(5px);
+            ">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% block contenido %}
         {% endblock %}
     </main>

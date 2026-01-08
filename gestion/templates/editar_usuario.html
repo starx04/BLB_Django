@@ -1,0 +1,77 @@
+{% extends "index.html" %}
+
+{% block contenido %}
+<div class="form-container"
+    style="max-width: 800px; margin: 2rem auto; padding: 2rem; background: var(--card-bg); border-radius: 15px; border: var(--glass-border); backdrop-filter: blur(10px);">
+    <div class="section-header" style="margin-bottom: 2rem;">
+        <h2 style="color: var(--neon-blue);">✏️ Editar Usuario: {{ usuario_obj.username }}</h2>
+        <a href="javascript:history.back()" class="btn-add" style="background: #555;">Volver</a>
+    </div>
+
+    <form method="post" class="neon-form">
+        {% csrf_token %}
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div>
+                <label>Nombre de Usuario</label>
+                {{ form.username }}
+            </div>
+            <div>
+                <label>Correo Electrónico</label>
+                {{ form.email }}
+            </div>
+            <div>
+                <label>Primer Nombre</label>
+                {{ form.first_name }}
+            </div>
+            <div>
+                <label>Apellido</label>
+                {{ form.last_name }}
+            </div>
+            <div>
+                <label>DNI / Identificación</label>
+                {{ form.dni }}
+            </div>
+            <div>
+                <label>Teléfono</label>
+                {{ form.telefono }}
+            </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+            <label>Dirección</label>
+            {{ form.direccion }}
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <button type="submit" class="btn-submit"
+                style="width: 100%; background: var(--neon-green); color: #000; padding: 1rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s;">
+                Guardar Cambios
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+    .neon-form input {
+        width: 100%;
+        padding: 0.8rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: #fff;
+        margin-top: 0.5rem;
+    }
+
+    .neon-form input:focus {
+        border-color: var(--neon-blue);
+        box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        outline: none;
+    }
+
+    .btn-submit:hover {
+        box-shadow: 0 0 20px var(--neon-green);
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}

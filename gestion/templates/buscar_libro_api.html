@@ -32,6 +32,7 @@
         <div>
             <p><strong>Título:</strong> {{ resultado.titulo }}</p>
             <p><strong>Páginas:</strong> {{ resultado.paginas }}</p>
+            <p><strong>Año:</strong> {{ resultado.anio }}</p>
             <form method="post" action="{% url 'guardar_libro_api' %}" style="margin-top: 1rem;">
                 {% csrf_token %}
                 <input type="hidden" name="titulo" value="{{ resultado.titulo }}">
@@ -67,9 +68,12 @@
             <tr>
                 <td>
                     {% if libro.cover_url %}
-                    <img src="{{ libro.cover_url }}" alt="Portada" style="max-width: 50px;">
+                    <img src="{{ libro.cover_url }}" alt="Portada"
+                        style="max-width: 60px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
                     {% else %}
-                    N/A
+                    <div
+                        style="width: 60px; height: 80px; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #777; border-radius: 4px;">
+                        Sin Portada</div>
                     {% endif %}
                 </td>
                 <td>{{ libro.titulo }}</td>
@@ -84,7 +88,7 @@
                         <input type="hidden" name="isbn" value="{{ libro.isbn }}">
                         <input type="hidden" name="cover_url" value="{{ libro.cover_url }}">
                         <button type="submit"
-                            style="background-color: var(--neon-blue); color: #fff; border: none; padding: 0.5rem; cursor: pointer;">Guardar</button>
+                            style="background-color: var(--neon-blue); color: #000; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px; font-weight: bold;">Guardar</button>
                     </form>
                 </td>
             </tr>
