@@ -4,7 +4,9 @@
 <section class="recent-section">
     <div class="section-header">
         <h2>Autores</h2>
+        {% if can_manage_authors %}
         <a href="{% url 'crear_autor' %}" class="btn-add">+ Nuevo Autor</a>
+        {% endif %} 
     </div>
     <table>
         <thead>
@@ -24,8 +26,10 @@
                 <td>{{ autor.apellido }}</td>
                 <td>{{ autor.bibliografia }}</td>
                 <td>
+                    {% if can_manage_authors %}
                     <a href="{% url 'editar_autor' autor.id %}"
                         style="color: var(--neon-blue); text-decoration: none;">Editar</a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}

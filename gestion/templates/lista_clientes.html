@@ -5,6 +5,10 @@
     <div class="section-header">
         <h2 style="color: var(--neon-green);">👤 Gestión de Clientes</h2>
         <span class="status available">{{ clientes.count }} Registrados</span>
+        <p style="margin-top:8px; color:#9aa4b2; font-size:0.9rem;">Se muestran los usuarios con el rol <strong>Cliente</strong> (usuarios que se registraron mediante el formulario de registro).</p>
+        {% if clientes.count == 0 %}
+        <p style="margin-top:6px; color:#e2e8f0; font-size:0.9rem;">No hay clientes en el sistema: puedes crear uno desde el registro o asignar el grupo <em>Cliente</em> a usuarios existentes desde el panel de Administración.</p>
+        {% endif %}
     </div>
 
     <table style="margin-top: 2rem;">
@@ -38,8 +42,7 @@
                         <a href="{% url 'editar_usuario' user.id %}" class="btn-add"
                             style="padding: 5px 10px; font-size: 0.8em; background: #555;">✏️ Editar</a>
 
-                        {% if user.is_superuser or "Administrador" in user.groups.all.0.name or "Administrador" in
-                        user.groups.all.1.name %}
+                        {% if can_delete_users %}
                         <form action="{% url 'eliminar_usuario' user.id %}" method="post"
                             onsubmit="return confirm('¿Está seguro de eliminar a este cliente? Se borrará todo su historial.');"
                             style="margin: 0;">

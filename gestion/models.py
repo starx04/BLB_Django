@@ -120,6 +120,9 @@ class Prestamos(models.Model):
         - Si es 'Daño' ('d'): Se cobra el daño Y el retraso (si existe).
         - Si es Normal: Solo se cobra retraso (si existe).
         """
+        from decimal import Decimal
+        from django.conf import settings as _settings
+
         if not self.fecha_devolucion:
             self.fecha_devolucion = timezone.now().date()
             self.estado = 'devuelto'
@@ -132,14 +135,17 @@ class Prestamos(models.Model):
                      self.libro.stock -= 1
                      self.libro.save()
                  
-                 self.Multa.create(tipo='p', monto=monto_multa)
+                 # Si no se proporciona monto, pasamos None para que `Multa.save()` aplique el default.
+                 monto = monto_multa if monto_multa not in (None, 0) else None
+                 self.Multa.create(tipo='p', monto=monto)
                  self.estado = 'multado'
                  self.save()
                  return 
             
             # CASO 2: CON DAÑOS (Acumulable)
             if tipo_multa == 'd':
-                 self.Multa.create(tipo='d', monto=monto_multa)
+                 monto = monto_multa if monto_multa not in (None, 0) else None
+                 self.Multa.create(tipo='d', monto=monto)
             
             # CASO 3: RETRASO (Automático)
             # Se genera si hay días de retraso (y no fue pérdida total)
@@ -211,10 +217,40 @@ class Multa(models.Model):
                 # Si intentan cambiar algo en una multa pagada, lanzamos error
                 raise PermissionError("No se puede modificar una multa que ya ha sido pagada.")
 
+        from decimal import Decimal
+        from django.conf import settings as _settings
+
         if not self.codigo:
             self.codigo = generar_codigo_unico("MULT")
-        if self.tipo ==  'r' and  self.monto == 0:
-            self.monto = self.prestamo.multa_retraso
+
+        # Normalizamos monto (aceptar strings) y si falta, usamos valores por defecto
+        try:
+            if self.monto in (None, ''):
+                monto_val = None
+            else:
+                monto_val = Decimal(self.monto)
+        except Exception:
+            monto_val = None
+
+        if self.tipo == 'r':
+            if not monto_val or monto_val == 0:
+                self.monto = self.prestamo.multa_retraso
+            else:
+                self.monto = monto_val
+        elif self.tipo == 'd':
+            if not monto_val or monto_val == 0:
+                self.monto = Decimal(getattr(_settings, 'MULTA_DETERIORO', 10))
+            else:
+                self.monto = monto_val
+        elif self.tipo == 'p':
+            if not monto_val or monto_val == 0:
+                self.monto = Decimal(getattr(_settings, 'MULTA_PERDIDA', 50))
+            else:
+                self.monto = monto_val
+        else:
+            # Si se ingresó un monto arbitrario (por si acaso)
+            self.monto = monto_val if monto_val is not None else Decimal('0.00')
+
         super().save(*args, **kwargs)
 
 # Extension del Usuario Django

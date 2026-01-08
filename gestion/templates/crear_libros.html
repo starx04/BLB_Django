@@ -10,9 +10,13 @@
     <h3>Autocompletar con OpenLibrary</h3>
     <div style="display: flex; gap: 10px;">
         <input type="text" id="api_isbn" placeholder="Ingresa ISBN para buscar..." style="flex: 1;">
-        <button type="button" onclick="buscarISBN()" style="width: auto;">Buscar</button>
+        <button type="button" onclick="buscarISBN()" class="btn btn-secondary" style="width: auto;">Buscar por ISBN</button>
     </div>
-    <small style="color: #888;">Ingresa el ISBN y pulsa Buscar para rellenar los datos automáticamente.</small>
+    <div style="display:flex; gap:10px; margin-top:8px;">
+        <input type="text" id="api_title" placeholder="O busca por título (ej: Cien Años de Soledad)" style="flex:1;">
+        <button type="button" onclick="buscarTitulo()" class="btn btn-secondary" style="width:auto;">Buscar por Título</button>
+    </div>
+    <small style="color: #888;">Ingresa ISBN o Título y pulsa Buscar para rellenar los datos automáticamente desde OpenLibrary.</small>
 </div>
 
 <!-- Mensaje de Advertencia de Duplicado -->
@@ -41,24 +45,20 @@
     {% endif %}
 
     <label for="id_isbn">ISBN</label>
-    <input type="text" id="id_isbn" name="isbn" value="{{ prefill.isbn|default:'' }}" {% if prefill.is_api %}readonly
-        style="background: rgba(255,255,255,0.02); color: #888;" {% endif %}>
+    <input type="text" id="id_isbn" name="isbn" value="{{ prefill.isbn|default:'' }}" {% if prefill.is_api %} readonly style="background: rgba(255,255,255,0.02); color: #888;" {% endif %}>
 
     <!-- URL oculta para la imagen de la API -->
     <input type="hidden" id="id_cover_url" name="cover_url" value="{{ prefill.cover_url|default:'' }}">
 
     <label for="id_titulo">Título del Libro</label>
-    <input type="text" id="id_titulo" name="titulo" required value="{{ prefill.titulo|default:'' }}" {% if
-        prefill.is_api %}readonly style="background: rgba(255,255,255,0.02); color: #888;" {% endif %}>
+    <input type="text" id="id_titulo" name="titulo" required value="{{ prefill.titulo|default:'' }}" {% if prefill.is_api %} readonly style="background: rgba(255,255,255,0.02); color: #888;" {% endif %}>
 
     <label for="id_autor_texto">Autor</label>
     <div style="display: flex; gap: 5px; margin-bottom: 1rem;">
-        <input type="text" id="id_autor_texto" name="autor_texto" placeholder="Nombre del autor..."
-            value="{{ prefill.autor_texto|default:'' }}" {% if prefill.is_api %}readonly
-            style="background: rgba(255,255,255,0.02); color: #888; flex: 1;" {% else %}style="flex: 1;" {% endif %}>
+        <input type="text" id="id_autor_texto" name="autor_texto" placeholder="Nombre del autor..." value="{{ prefill.autor_texto|default:'' }}" {% if prefill.is_api %} readonly style="background: rgba(255,255,255,0.02); color: #888; flex: 1;" {% else %} style="flex: 1;" {% endif %}>
 
         {% if not prefill.is_api %}
-        <select name="autor_select" id="id_autor_select" onchange="copiarAutor()" style="width: 30%;">
+        <select name="autor_select" id="id_autor_select" class="select-dark" onchange="copiarAutor()" style="width: 30%;">
             <option value="">-- Existentes --</option>
             {% for autor in autores %}
             <option value="{{ autor.nombre }} {{ autor.apellido }}">{{ autor.nombre }} {{ autor.apellido }}</option>
@@ -84,13 +84,10 @@
 
     <div style="margin-bottom: 1rem;">
         <label for="id_categoria">Categoría</label>
-        <select name="categoria" id="id_categoria">
+        <select name="categoria" id="id_categoria" class="select-dark">
             <option value="">-- Seleccione Categoría (Opcional) --</option>
             {% for cat in categorias %}
-            <option value="{{ cat.id }}" {% if prefill.categoria|stringformat:"s"==cat.id|stringformat:"s" %}selected{%
-                endif %}>
-                {{ cat.nombre }}
-            </option>
+            <option value="{{ cat.id }}" {% if prefill.categoria|stringformat:"s" == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.nombre }}</option>
             {% endfor %}
         </select>
     </div>
@@ -188,6 +185,48 @@
         } finally {
             btn.textContent = "Buscar";
             btn.disabled = false;
+        }
+    }
+
+    // Nueva funcionalidad: buscar por título en OpenLibrary
+    async function buscarTitulo() {
+        const q = document.getElementById('api_title').value.trim();
+        if (!q) return;
+        const btn = document.querySelector('button[onclick="buscarTitulo()"]');
+        btn.textContent = 'Buscando...'; btn.disabled = true;
+        try {
+            const resp = await fetch(`https://openlibrary.org/search.json?title=${encodeURIComponent(q)}&limit=10`);
+            const data = await resp.json();
+            const doc = data.docs && data.docs[0];
+            if (doc) {
+                const isbn_val = (doc.isbn && doc.isbn[0]) || '';
+                const titulo = doc.title || q;
+                const autor = (doc.author_name && doc.author_name[0]) || '';
+
+                document.getElementById('id_isbn').value = isbn_val;
+                document.getElementById('id_titulo').value = titulo;
+                document.getElementById('id_autor_texto').value = autor;
+
+                // Bloquear los campos importados
+                ['id_isbn','id_titulo','id_autor_texto'].forEach(id=>{
+                    const el = document.getElementById(id); if(el){ el.readOnly = true; el.style.background = 'rgba(255,255,255,0.02)'; el.style.color='#888'; }
+                });
+
+                // intentar portada
+                if (doc.cover_i) {
+                    const coverUrl = `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;
+                    document.getElementById('id_cover_url').value = coverUrl;
+                    document.getElementById('img_preview').src = coverUrl;
+                    document.getElementById('preview_container').style.display = 'block';
+                }
+
+            } else {
+                alert('No se encontraron resultados por título.');
+            }
+        } catch (e) {
+            alert('Error al buscar por título.');
+        } finally {
+            btn.textContent = 'Buscar por Título'; btn.disabled = false;
         }
     }
 </script>

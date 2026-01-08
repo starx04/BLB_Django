@@ -11,18 +11,18 @@
         {% csrf_token %}
 
         <label for="id_libro">Libro vinculado</label>
-        <select id="id_libro" name="libro" required>
+        <select id="id_libro" name="libro" class="select-dark" required>
             {% for libro in libros %}
-            <option value="{{ libro.id }}" {% if libro.id==prestamo.libro.id %}selected{% endif %}>
+            <option value="{{ libro.id }}" {% if libro.id == prestamo.libro.id %}selected{% endif %}>
                 {{ libro.titulo }} (Stock: {{ libro.stock }})
             </option>
             {% endfor %}
         </select>
 
         <label for="id_usuario">Usuario solicitante</label>
-        <select id="id_usuario" name="usuario" required>
+        <select id="id_usuario" name="usuario" class="select-dark" required>
             {% for usuario in usuarios %}
-            <option value="{{ usuario.id }}" {% if usuario.id==prestamo.usuario.id %}selected{% endif %}>
+            <option value="{{ usuario.id }}" {% if usuario.id == prestamo.usuario.id %}selected{% endif %}>
                 {{ usuario.username }}
             </option>
             {% endfor %}
@@ -41,17 +41,15 @@
         </div>
 
         <label for="id_estado" style="margin-top: 1rem; display: block;">Estado del Préstamo</label>
-        <select id="id_estado" name="estado" required>
+        <select id="id_estado" name="estado" class="select-dark" required>
             {% for val, label in prestamo.ESTADOS %}
-            <option value="{{ val }}" {% if val==prestamo.estado %}selected{% endif %}>{{ label }}</option>
+            <option value="{{ val }}" {% if val == prestamo.estado %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
 
-        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-            <button type="submit" style="background: var(--neon-blue); color: #000; font-weight: bold;">Guardar
-                Cambios</button>
-            <a href="{% url 'lista_prestamos' %}" class="button"
-                style="text-decoration: none; padding: 1rem; background: #333; color: #fff; border-radius: 4px; text-align: center; flex: 1;">Cancelar</a>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+            <a href="{% url 'lista_prestamos' %}" class="btn btn-secondary" style="text-decoration: none;">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
         </div>
     </form>
 </div>

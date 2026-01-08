@@ -8,6 +8,7 @@ from django.http import HttpResponseForbidden
 from django.core.files.base import ContentFile
 from django.contrib.auth import login
 from django.db.models import Sum
+import datetime
 
 from .models import Libro, Prestamos, Multa, Autor, RegistroAuditoria, PerfilUsuario
 from django.contrib import messages
@@ -34,9 +35,9 @@ def index(request):
     """Vista pública del Dashboard - No requiere login."""
     title = settings.TITLE
     total_libros = Libro.objects.count()
-    prestamos_activos = Prestamos.objects.filter(estado='prestado').count()
+    prestamos_activos = Prestamos.objects.filter(fecha_devolucion__isnull=True).count()
     multas_pendientes = Multa.objects.filter(pagada=False).aggregate(total=Sum('monto'))['total'] or 0
-    usuarios_registrados = User.objects.count()
+    clientes_registrados = User.objects.filter(is_staff=False, is_superuser=False).count()
     libros_recientes = Libro.objects.order_by('-id')[:5]
 
     context = {
@@ -44,20 +45,31 @@ def index(request):
         'total_libros': total_libros,
         'prestamos_activos': prestamos_activos,
         'multas_pendientes': multas_pendientes,
-        'usuarios_registrados': usuarios_registrados,
-        'libros_recientes': libros_recientes
+        'clientes_registrados': clientes_registrados,
+        'libros_recientes': libros_recientes,
+        'can_add_books': es_personal_bodega(request.user),
+        'is_admin': es_admin(request.user)
     }
     return render(request, 'home.html', context)
 
 def lista_libros(request):
     """Vista pública de catálogo de libros."""
     libros = Libro.objects.all()
-    return render(request, 'libros.html', {'libros': libros})
+    return render(request, 'libros.html', {
+        'libros': libros,
+        'can_add_books': es_personal_bodega(request.user),
+        'can_edit_books': es_personal_bodega(request.user),
+        'is_admin': es_admin(request.user)
+    })
 
 def lista_autores(request):
     """Vista pública de autores."""
     autores = Autor.objects.all()
-    return render(request, 'autores.html', {'autores': autores})
+    return render(request, 'autores.html', {
+        'autores': autores,
+        'can_manage_authors': es_personal_bodega(request.user),
+        'is_admin': es_admin(request.user)
+    })
 
 # --- SECCION LIBROS (PERSONAL) ---
 
@@ -180,10 +192,13 @@ def crear_libros(request, id=None):
 @login_required
 def crear_autor(request, id=None):
     autor = get_object_or_404(Autor, id=id) if id else None
+    titulo = 'Editar Autor' if id else 'Nuevo Autor'
+    texto_boton = 'Guardar' if id else 'Crear'
     if request.method == 'POST':
         nombre = request.POST.get('nombre')
         apellido = request.POST.get('apellido')
         bibliografia = request.POST.get('bibliografia')
+        ol_key = request.POST.get('ol_key')
 
         if autor:
             autor.nombre = nombre
@@ -197,7 +212,44 @@ def crear_autor(request, id=None):
                 bibliografia=bibliografia
             )
         return redirect('lista_autores')
-    return render(request, 'crear_autor.html', {'autor': autor, 'mode': 'Editar' if id else 'Nuevo'})
+    return render(request, 'crear_autor.html', {
+        'autor': autor,
+        'titulo': titulo,
+        'texto_boton': texto_boton
+    })
+
+
+@login_required
+def openlibrary_buscar_autor(request):
+    """Busca autores en OpenLibrary y retorna JSON con resultados simples."""
+    from django.http import JsonResponse
+    q = request.GET.get('q', '').strip()
+    results = []
+    if q:
+        try:
+            resp = requests.get('https://openlibrary.org/search/authors.json', params={'q': q}, timeout=5)
+            data = resp.json()
+            for doc in data.get('docs', [])[:10]:
+                key = doc.get('key')
+                name = doc.get('name')
+                birth_date = doc.get('birth_date')
+                death_date = doc.get('death_date')
+                bio = None
+                if isinstance(doc.get('bio'), str):
+                    bio = doc.get('bio')
+                elif isinstance(doc.get('bio'), dict):
+                    bio = doc.get('bio').get('value')
+                results.append({
+                    'key': key,
+                    'name': name,
+                    'birth_date': birth_date,
+                    'death_date': death_date,
+                    'bio': bio
+                })
+        except Exception:
+            # Silencioso en errores de red para no romper la UI
+            pass
+    return JsonResponse({'results': results})
 
 # --- SECCION PRESTAMOS ---
 
@@ -211,14 +263,23 @@ def lista_prestamos(request):
         prestamos = Prestamos.objects.all().order_by('-fecha')
     else:
         prestamos = Prestamos.objects.filter(usuario=request.user).order_by('-fecha')
-    return render(request, 'prestamos.html', {'prestamos': prestamos})
+    return render(request, 'prestamos.html', {
+        'prestamos': prestamos,
+        'can_manage': es_personal_biblioteca(request.user),
+        'multa_deterioro_default': getattr(settings, 'MULTA_DETERIORO', 10),
+        'multa_perdida_default': getattr(settings, 'MULTA_PERDIDA', 50),
+    })
 
 @login_required
 def crear_prestamo(request):
     """
-    CLIENTE: Crea una solicitud.
-    PERSONAL: Crea préstamo directo.
+    CLIENTE: Crea una solicitud. Administradores también pueden crear solicitudes.
+    PERSONAL (Bibliotecario/Bodeguero) no puede solicitar libros.
     """
+    # Restricción: sólo Clientes o Administradores pueden acceder a esta vista
+    if not (es_cliente(request.user) or es_admin(request.user)):
+        return HttpResponseForbidden()
+
     libros = [l for l in Libro.objects.all() if l.disponibles > 0] 
     es_personal = es_personal_biblioteca(request.user)
     usuarios = User.objects.all() if es_personal else [request.user]
@@ -231,19 +292,47 @@ def crear_prestamo(request):
         usuario_id = request.POST.get('usuario') if es_personal else request.user.id
         libro = get_object_or_404(Libro, id=libro_id)
         usuario = get_object_or_404(User, id=usuario_id)
-        
+
         # Bloqueo morosos
         tiene_multas = Multa.objects.filter(prestamo__usuario=usuario, pagada=False).exists()
         if tiene_multas:
             return HttpResponseForbidden("Usuario con multas pendientes.")
-            
-        estado = 'prestado' if es_personal else 'solicitado'
-        fecha_form = request.POST.get('fecha_prestamo', timezone.now().date())
+
+        # Siempre creamos primero como "solicitado"; la aceptación se realiza con la vista `aceptar_solicitud`
+        estado = 'solicitado'
+
+        # Validar y parsear la fecha de solicitud (no puede superar la fecha actual)
+        fecha_str = request.POST.get('fecha_prestamo')
+        hoy = timezone.now().date()
+        if fecha_str:
+            try:
+                fecha_obj = datetime.date.fromisoformat(fecha_str)
+            except Exception:
+                messages.error(request, "Formato de fecha inválido.")
+                return render(request, 'crear_prestamo.html', {
+                    'libros': libros,
+                    'usuarios': usuarios,
+                    'es_personal': es_personal,
+                    'libro_preseleccionado': int(libro_seleccionado_id) if libro_seleccionado_id else None,
+                    'fecha': hoy.isoformat()
+                })
+            if fecha_obj > hoy:
+                messages.error(request, "La fecha de solicitud no puede ser mayor a la fecha actual.")
+                return render(request, 'crear_prestamo.html', {
+                    'libros': libros,
+                    'usuarios': usuarios,
+                    'es_personal': es_personal,
+                    'libro_preseleccionado': int(libro_seleccionado_id) if libro_seleccionado_id else None,
+                    'fecha': hoy.isoformat()
+                })
+        else:
+            fecha_obj = hoy
+
         dias_prestamo = getattr(settings, 'DIAS_PRESTAMO', 7)
-        
+
         prestamo = Prestamos.objects.create(
-            libro=libro, usuario=usuario, 
-            fecha=fecha_form, 
+            libro=libro, usuario=usuario,
+            fecha=fecha_obj,
             fecha_max=None, # Dejamos que el model.save() lo calcule solo
             estado=estado
         )
@@ -299,9 +388,23 @@ def finalizar_prestamo(request, id):
     prestamo = get_object_or_404(Prestamos, id=id)
     if request.method == 'POST':
         tipo = request.POST.get('tipo_dano')
-        monto = request.POST.get('monto_dano', 0)
+        monto_raw = request.POST.get('monto_dano', '').strip()
+
+        # Normalizar monto a Decimal si es posible, o None
+        from decimal import Decimal, InvalidOperation
+        monto = None
+        if monto_raw:
+            try:
+                monto = Decimal(monto_raw)
+            except InvalidOperation:
+                messages.error(request, "Monto inválido para la multa.")
+                return redirect('lista_prestamos')
+
+        # Si no se indicó monto lo dejamos como None; el modelo `Multa.save()` aplicará el valor por defecto cuando corresponda.
+        # (Evita duplicar la lógica de defaults en la vista)
+
         prestamo.finalizar(tipo_multa=tipo, monto_multa=monto)
-        
+
         RegistroAuditoria.objects.create(
             usuario=request.user,
             accion='finalizar_prestamo',
@@ -333,7 +436,11 @@ def lista_multas(request):
         multas = Multa.objects.all().order_by('-fecha')
     else:
         multas = Multa.objects.filter(prestamo__usuario=request.user).order_by('-fecha')
-    return render(request, 'multas.html', {'multas': multas})
+    return render(request, 'multas.html', {
+        'multas': multas,
+        'can_manage': es_personal_biblioteca(request.user),
+        'is_admin': es_admin(request.user)
+    })
 
 
 
@@ -398,7 +505,7 @@ def editar_multa(request, id):
         messages.success(request, f"Multa {multa.codigo} actualizada.")
         return redirect('lista_multa')
         
-    return render(request, 'editar_multa.html', {'multa': multa})
+    return render(request, 'editar_multa.html', {'multa': multa, 'is_admin': es_admin(request.user)})
 
 # --- SECCION ADMIN ---
 
@@ -451,6 +558,20 @@ def crear_empleado(request):
         user = User.objects.create_user(username=username, password=passw, email=email)
         grupo = Group.objects.get(id=grupo_id)
         user.groups.add(grupo)
+
+        # Si se asigna un rol de personal, removemos el grupo 'Cliente' si existiera y marcamos is_staff
+        try:
+            cliente_group = Group.objects.get(name='Cliente')
+            if user.groups.filter(name='Cliente').exists():
+                user.groups.remove(cliente_group)
+        except Group.DoesNotExist:
+            pass
+
+        if grupo.name in ['Bibliotecario', 'Bodeguero', 'Administrador']:
+            user.is_staff = True
+        else:
+            user.is_staff = False
+        user.save()
         
         RegistroAuditoria.objects.create(
             usuario=request.user,
@@ -477,14 +598,20 @@ def lista_clientes(request):
     if not (es_admin(request.user) or es_personal_biblioteca(request.user)):
         return HttpResponseForbidden()
     
-    # Clientes: Únicamente los que tienen el rol de Cliente y NO son personal
-    clientes = User.objects.filter(groups__name='Cliente').exclude(
-        Q(groups__name__in=['Administrador', 'Bibliotecario', 'Bodeguero']) | Q(is_superuser=True)
+    # Clientes: incluimos usuarios con grupo 'Cliente' OR usuarios normales (no staff / no superuser),
+    # y excluimos personal/administradores para evitar mezclar roles.
+    clientes = User.objects.filter(
+        Q(groups__name='Cliente') | Q(is_staff=False, is_superuser=False)
+    ).exclude(
+        Q(groups__name__iexact='Administrador') | Q(groups__name__iexact='Bibliotecario') | Q(groups__name__iexact='Bodeguero') | Q(is_superuser=True)
     ).annotate(
         multas_pendientes_count=Count('Prestamos__Multa', filter=Q(Prestamos__Multa__pagada=False))
     ).distinct().order_by('username')
     
-    return render(request, 'lista_clientes.html', {'clientes': clientes})
+    return render(request, 'lista_clientes.html', {
+        'clientes': clientes,
+        'can_delete_users': es_admin(request.user)
+    })
 
 @user_passes_test(es_admin)
 @login_required
@@ -557,23 +684,36 @@ def detalle_usuario(request, id):
 def registro(request):
     from .forms import FormularioRegistroExtendido
     from django.contrib.auth.models import Group
+
+    # Soporte para prefill dinámico vía query params (username, email)
+    initial = {}
+    for field in ('username', 'email'):
+        val = request.GET.get(field)
+        if val:
+            initial[field] = val
+
     if request.method == 'POST':
         form = FormularioRegistroExtendido(request.POST)
         if form.is_valid():
             usuario = form.save()
             grupo_cliente, _ = Group.objects.get_or_create(name='Cliente')
             usuario.groups.add(grupo_cliente)
-            
+            # Asegurar is_staff en False por defecto
+            usuario.is_staff = False
+            usuario.save()
+
             RegistroAuditoria.objects.create(
                 usuario=usuario,
                 accion='crear_usuario',
                 descripcion=f"Nuevo cliente registrado: {usuario.username}",
                 ip_address=request.META.get('REMOTE_ADDR')
             )
+            # Logeamos automáticamente y redirigimos al Dashboard principal
             login(request, usuario)
+            messages.success(request, "Registro exitoso. Bienvenido al Dashboard.")
             return redirect('index')
     else:
-        form = FormularioRegistroExtendido()
+        form = FormularioRegistroExtendido(initial=initial)
     return render(request, 'registration/registro.html', {'form': form})
 
 # --- SECCION API Y OTROS ---

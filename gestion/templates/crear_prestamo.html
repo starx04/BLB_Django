@@ -8,17 +8,16 @@
 <form method="post">
     {% csrf_token %}
     <label for="id_libro">Libro</label>
-    <select id="id_libro" name="libro" required>
+    <select id="id_libro" name="libro" class="select-dark" required>
         <option value="">--Seleccione un Libro--</option>
         {% for libro in libros %}
-        <option value="{{ libro.id }}" {% if libro.id==libro_preseleccionado %}selected{% endif %}>{{ libro.titulo }}
-        </option>
+        <option value="{{ libro.id }}" {% if libro.id == libro_preseleccionado %}selected{% endif %}>{{ libro.titulo }}</option>
         {% endfor %}
     </select>
 
     <label for="id_usuario">Usuario Solicitante</label>
     {% if es_personal %}
-    <select id="id_usuario" name="usuario" required>
+    <select id="id_usuario" name="usuario" class="select-dark" required>
         <option value="">--Seleccione un Usuario--</option>
         {% for usuario in usuarios %}
         <option value="{{ usuario.id }}">{{ usuario.username }}</option>
@@ -31,10 +30,11 @@
     </div>
     {% endif %}
 
-    <label for="id_fecha_prestamo">Fecha de Préstamo</label>
+    <label for="id_fecha_prestamo">Fecha de Solicitud</label>
     <input type="date" id="id_fecha_prestamo" name="fecha_prestamo" value="{{ fecha }}" class="form-control"
         style="background: #111; color: #fff; border: 1px solid #333; padding: 10px; width: 100%; border-radius: 4px;"
-        required>
+        max="{{ fecha }}" required>
+    <small style="color:#9aa4b2; display:block; margin-bottom: 8px;">Puedes modificar la fecha de solicitud si lo deseas (no puede ser mayor a hoy).</small>
 
     <div
         style="margin-top: 15px; padding: 15px; background: rgba(0,255,187,0.05); border-radius: 8px; border: 1px dashed var(--neon-green);">

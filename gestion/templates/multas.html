@@ -48,11 +48,8 @@
                         </form>
                         {% endif %}
 
-                        {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name or "Administrador" in
-                        user.groups.all.0.name or "Bibliotecario" in user.groups.all.1.name or "Administrador" in
-                        user.groups.all.1.name %}
-                        {% if not multa.pagada or user.is_superuser or "Administrador" in user.groups.all.0.name or
-                        "Administrador" in user.groups.all.1.name %}
+                        {% if can_manage %}
+                        {% if not multa.pagada or is_admin %}
                         <a href="{% url 'editar_multa' multa.id %}" class="btn-add"
                             style="padding: 5px 10px; font-size: 0.8em; background: #555;">✏️ Editar</a>
                         {% endif %}

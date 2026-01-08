@@ -16,9 +16,9 @@
         {% csrf_token %}
 
         <label for="id_tipo">Tipo de Multa</label>
-        <select id="id_tipo" name="tipo" required>
+        <select id="id_tipo" name="tipo" class="select-dark" required>
             {% for val, label in multa.TIPOS %}
-            <option value="{{ val }}" {% if val==multa.tipo %}selected{% endif %}>{{ label }}</option>
+            <option value="{{ val }}" {% if val == multa.tipo %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
 
@@ -49,7 +49,7 @@
     </form>
 </div>
 
-{% if multa.pagada and not user.is_superuser and not "Administrador" in user.groups.all.0.name %}
+{% if multa.pagada and not user.is_superuser and not is_admin %}
 <div style="margin-top: 1rem; color: var(--neon-red); font-weight: bold; text-align: center;">
     ⚠️ Esta multa ya ha sido pagada. Únicamente un Administrador puede modificarla.
 </div>

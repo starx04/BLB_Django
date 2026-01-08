@@ -29,15 +29,14 @@
     </div>
     <div class="stat-card">
         <div class="stat-title">Lectores</div>
-        <div class="stat-value">{{ usuarios_registrados }}</div>
+        <div class="stat-value">{{ clientes_registrados }}</div>
     </div>
 </div>
 
 <section class="recent-section">
     <div class="section-header">
         <h3>Últimos Ingresos</h3>
-        {% if user.is_authenticated and user.is_superuser or "Bodeguero" in user.groups.all.0.name or "Administrador" in
-        user.groups.all.0.name %}
+        {% if can_add_books %}
         <a href="{% url 'crear_libros' %}" class="btn-add">➕ Nuevo Libro</a>
         {% endif %}
     </div>
@@ -74,7 +73,7 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if libro.esta_disponible %}
+                    {% if libro.esta_disponible and is_cliente %}
                     <a href="{% url 'crear_prestamo' %}?libro_id={{ libro.id }}" class="btn-add"
                         style="font-size: 0.7em; padding: 4px 8px; background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue);">
                         Solicitar

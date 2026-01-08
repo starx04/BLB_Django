@@ -34,37 +34,17 @@ class FormularioBusquedaLibro(forms.Form):
         return datos_limpios
 
 class FormularioRegistroExtendido(FormularioCreacionUsuario):
-    dni = forms.CharField(max_length=20, required=True, label="DNI / Identificación")
-    direccion = forms.CharField(max_length=200, required=False, label="Dirección")
-    telefono = forms.CharField(max_length=20, required=False, label="Teléfono")
+    """Formulario de registro simplificado: sólo datos de usuario (email incluido)."""
 
     class Meta(FormularioCreacionUsuario.Meta):
         model = Usuario
         fields = FormularioCreacionUsuario.Meta.fields + ('email',)
-        
-    def clean_dni(self):
-        dni = self.cleaned_data.get('dni')
-        if not dni.isdigit():
-             raise ErrorValidacion("El DNI debe contener solo números.")
-        return dni
-
-    def clean_telefono(self):
-        telefono = self.cleaned_data.get('telefono')
-        if telefono and not telefono.isdigit():
-             raise ErrorValidacion("El teléfono debe contener solo números.")
-        return telefono
 
     def save(self, commit=True):
         usuario = super().save(commit=False)
         if commit:
             usuario.save()
-            # El perfil se crea por la señal post_save, ahora lo actualizamos
-            if hasattr(usuario, 'perfil'):
-                perfil_usuario = usuario.perfil
-                perfil_usuario.dni = self.cleaned_data['dni']
-                perfil_usuario.direccion = self.cleaned_data['direccion']
-                perfil_usuario.telefono = self.cleaned_data['telefono']
-                perfil_usuario.save()
+            # Perfil se crea por la señal post_save; no rellenamos campos de perfil aquí
         return usuario
 
 class FormularioEdicionUsuario(forms.ModelForm):

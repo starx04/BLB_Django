@@ -28,11 +28,11 @@
             </div>
             <div style="flex: 1;">
                 <label style="display: block; color: #a0aec0; font-size: 0.8rem; margin-bottom: 5px;">Acción</label>
-                <select name="accion"
-                    style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px; border-radius: 6px;">
+                <select name="accion" class="select-dark"
+                    style="width: 100%; padding: 10px; border-radius: 6px;">
                     <option value="">Todas las acciones</option>
                     {% for key, label in acciones %}
-                    <option value="{{ key }}" {% if request.GET.accion==key %}selected{% endif %}>{{ label }}</option>
+                    <option value="{{ key }}" {% if request.GET.accion == key %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>

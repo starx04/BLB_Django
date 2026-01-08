@@ -5,18 +5,116 @@
     <h2>{{ titulo }}</h2>
 </div>
 
-<form method="POST" enctype="multipart/form-data">
+<form method="POST" enctype="multipart/form-data" id="autor_form">
     {% csrf_token %}
-    <label for="id_nombre">Nombre</label>
-    <input type="text" id="id_nombre" name="nombre" value="{{ autor.nombre|default_if_none:'' }}" required>
+    <style>
+    /* Mejor contraste para tema oscuro */
+    #autor_form label{ color: #e2e8f0; }
+    #autor_form input, #autor_form textarea{ background: rgba(255,255,255,0.03); color: #fff; border: 1px solid rgba(255,255,255,0.06); padding:8px; border-radius:6px; }
+    #autor_form input[type="radio"]{ accent-color: #00e6ff; }
+    #ol_results div{ border-color: rgba(255,255,255,0.06); }
+    </style>
 
-    <label for="id_apellido">Apellido</label>
-    <input type="text" id="id_apellido" name="apellido" value="{{ autor.apellido|default_if_none:'' }}" required>
+    <div style="margin-bottom: 0.5rem; color: #e2e8f0;">
+        <label style="margin-right:12px;"><input type="radio" name="modo" value="manual" checked> Crear manualmente</label>
+        <label><input type="radio" name="modo" value="openlibrary"> Buscar en OpenLibrary</label>
+    </div>
 
-    <label for="id_bibliografia">Bibliografia</label>
-    <input type="text" id="id_bibliografia" name="bibliografia" value="{{ autor.bibliografia|default_if_none:'' }}"
-        required>
+    <div id="openlibrary_ui" style="display: none; margin-bottom: 0.5rem;">
+        <input type="text" id="ol_query" placeholder="Buscar autor en OpenLibrary (ej: Gabriel García Márquez)" style="width:60%; padding:8px; border-radius:6px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); color:#fff;">
+        <button type="button" id="ol_search" style="margin-left:8px; padding:8px 10px; border-radius:6px; background:#2b6cb0; color:#fff; border:none;">Buscar</button>
+        <div id="ol_results" style="margin-top:0.5rem;"></div>
+        <div style="font-size:0.9rem; color:#9aa4b2; margin-top:0.25rem;">Al seleccionar un autor, los datos que provienen de OpenLibrary quedan no editables; los campos faltantes se pueden rellenar manualmente.</div>
+    </div>
 
-    <button type="submit">{{ texto_boton }}</button>
+    <input type="hidden" id="id_ol_key" name="ol_key" value="">
+
+    <label for="id_nombre" style="color:#e2e8f0;">Nombre</label>
+    <input type="text" id="id_nombre" name="nombre" value="{{ autor.nombre|default_if_none:'' }}" required style="width:100%; padding:10px; border-radius:6px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); color:#fff;">
+
+    <label for="id_apellido" style="color:#e2e8f0;">Apellido</label>
+    <input type="text" id="id_apellido" name="apellido" value="{{ autor.apellido|default_if_none:'' }}" required style="width:100%; padding:10px; border-radius:6px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); color:#fff;">
+
+    <label for="id_bibliografia" style="color:#e2e8f0;">Bibliografia</label>
+    <textarea id="id_bibliografia" name="bibliografia" rows="4" style="width: 100%; padding:10px; border-radius:6px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); color:#fff;">{{ autor.bibliografia|default_if_none:'' }}</textarea>
+
+    <div style="margin-top:0.75rem; display:flex; gap:8px; align-items:center;">
+        <button type="submit" style="background: #00e6ff; color: #062021; padding: 12px 20px; border-radius: 6px; border: none; font-weight: bold;">{{ texto_boton }}</button>
+        <button type="button" id="ol_clear" style="display:none; background: transparent; border: 1px solid rgba(255,255,255,0.06); color:#fff; padding: 10px 12px; border-radius:6px;">Limpiar selección</button>
+    </div>
 </form>
+
+<script>
+(function(){
+    const modoRadios = document.querySelectorAll('input[name="modo"]');
+    const openUi = document.getElementById('openlibrary_ui');
+    const olSearchBtn = document.getElementById('ol_search');
+    const olQuery = document.getElementById('ol_query');
+    const olResults = document.getElementById('ol_results');
+    const olKeyInput = document.getElementById('id_ol_key');
+    const nombreInput = document.getElementById('id_nombre');
+    const apellidoInput = document.getElementById('id_apellido');
+    const bioInput = document.getElementById('id_bibliografia');
+    const olClearBtn = document.getElementById('ol_clear');
+
+    function setMode(mode){
+        if(mode === 'openlibrary'){
+            openUi.style.display = '';
+        } else {
+            openUi.style.display = 'none';
+            clearSelection();
+        }
+    }
+    modoRadios.forEach(r => r.addEventListener('change', e => setMode(e.target.value)));
+
+    function renderResults(items){
+        olResults.innerHTML = '';
+        if(!items.length){ olResults.innerHTML = '<div style="color:#666;">No se encontraron autores.</div>'; return; }
+        items.forEach(it =>{
+            const div = document.createElement('div');
+            div.style.padding = '6px 4px';
+            div.style.borderBottom = '1px solid #eee';
+            div.innerHTML = `<strong>${it.name}</strong> ${it.birth_date?('(' + it.birth_date + (it.death_date?(' - '+it.death_date):'') + ')') : ''} <button data-key="${it.key}" data-name="${it.name}" data-bio='${(it.bio||'').replace(/'/g,"\'")}' style="margin-left:10px;">Seleccionar</button>`;
+            olResults.appendChild(div);
+            div.querySelector('button').addEventListener('click', ()=> selectAuthor(it));
+        })
+    }
+
+    function selectAuthor(item){
+        // Parse name into nombre/apellidos (simple heurística)
+        const parts = (item.name || '').trim().split(' ');
+        const apellido = parts.length>1?parts.pop():'';
+        const nombre = parts.join(' ');
+        if(nombre) { nombreInput.value = nombre; nombreInput.readOnly = true; }
+        if(apellido) { apellidoInput.value = apellido; apellidoInput.readOnly = true; }
+        if(item.bio){ bioInput.value = item.bio; bioInput.readOnly = true; }
+        olKeyInput.value = item.key || '';
+        olClearBtn.style.display = '';
+    }
+
+    function clearSelection(){
+        olKeyInput.value = '';
+        nombreInput.readOnly = false;
+        apellidoInput.readOnly = false;
+        bioInput.readOnly = false;
+        olClearBtn.style.display = 'none';
+    }
+
+    olClearBtn.addEventListener('click', clearSelection);
+
+    olSearchBtn.addEventListener('click', function(){
+        const q = olQuery.value.trim();
+        if(!q) return;
+        olResults.innerHTML = '<div style="color:#666;">Buscando…</div>';
+        fetch('/api/openlibrary/autores/?q=' + encodeURIComponent(q))
+        .then(r=>r.json())
+        .then(data=>{
+            renderResults(data.results || []);
+        }).catch(()=>{
+            olResults.innerHTML = '<div style="color:#c00;">Error de red al buscar en OpenLibrary.</div>';
+        })
+    });
+})();
+</script>
+
 {% endblock %}

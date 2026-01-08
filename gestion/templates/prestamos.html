@@ -5,8 +5,10 @@
 <section class="recent-section" style="margin-bottom: 2rem;">
     <div class="section-header">
         <h2 style="color: var(--neon-purple);">📢 Solicitudes de Préstamo</h2>
+        {% if is_cliente %}
         <a href="{% url 'crear_prestamo' %}" class="btn-add">➕ Nueva Solicitud</a>
-    </div>
+        {% endif %}
+    </div> 
     <table>
         <thead>
             <tr>
@@ -32,9 +34,7 @@
                 <td>
                     <div style="display: flex; gap: 5px; align-items: center;">
                         {% if prestamo.estado == 'solicitado' %}
-                        {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name or "Administrador" in
-                        user.groups.all.0.name or "Bibliotecario" in user.groups.all.1.name or "Administrador" in
-                        user.groups.all.1.name %}
+                        {% if can_manage %}
                         <form action="{% url 'aceptar_solicitud' prestamo.id %}" method="post">
                             {% csrf_token %}
                             <button type="submit"
@@ -100,35 +100,53 @@
                         {{ prestamo.get_estado_display }}
                     </span>
                 </td>
-                <td>{% if prestamo.Multa.exists %}⚠️ Sí{% else %}No{% endif %}</td>
                 <td>
-                    {% if user.is_superuser or "Bibliotecario" in user.groups.all.0.name or "Administrador" in
-                    user.groups.all.0.name or "Bibliotecario" in user.groups.all.1.name or "Administrador" in
-                    user.groups.all.1.name %}
+                    {% with multas=prestamo.Multa.all %}
+                        {% if multas %}
+                        <ul style="list-style:none; padding:0; margin:0; font-size:0.9em;">
+                            {% for m in multas %}
+                                {% if m.tipo == 'r' %}
+                                    <li>⏰ Retraso: ${{ m.monto }}</li>
+                                {% endif %}
+                            {% endfor %}
+                            {% for m in multas %}
+                                {% if m.tipo == 'd' %}
+                                    <li>🛠 Deterioro: ${{ m.monto }}</li>
+                                {% endif %}
+                            {% endfor %}
+                            {% for m in multas %}
+                                {% if m.tipo == 'p' %}
+                                    <li>❌ Pérdida: ${{ m.monto }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        No
+                        {% endif %}
+                    {% endwith %}
+                </td>
+                <td>
+                    {% if can_manage %}
                     <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
                         {% if prestamo.estado == 'prestado' %}
-                        <form action="{% url 'finalizar_prestamo' prestamo.id %}" method="post"
-                            style="display:flex; gap:2px;">
+                        <form action="{% url 'finalizar_prestamo' prestamo.id %}" method="post" style="display:flex; gap:8px; align-items:center;">
                             {% csrf_token %}
-                            <select name="tipo_dano"
-                                style="background: #222; color: #fff; border: 1px solid #444; font-size: 0.8em;">
+                            <select name="tipo_dano" class="select-dark" style="font-size: 0.8em; width:150px;" onchange="onTipoDanoChange(this, '{{ multa_deterioro_default }}', '{{ multa_perdida_default }}', '{{ prestamo.id }}')">
                                 <option value="">Buen Estado</option>
                                 <option value="d">Con Daños</option>
                                 <option value="p">Pérdida Total</option>
                             </select>
-                            <button type="submit"
-                                style="background: var(--neon-blue); color: black; border:none; padding: 4px 8px; border-radius: 4px; cursor:pointer;">Finalizar</button>
+                            <input type="number" step="0.01" name="monto_dano" id="monto_dano_{{ prestamo.id }}" placeholder="Monto (opcional)" style="width:120px; display:none; padding:6px; border-radius:6px;" />
+                            <button type="submit" class="btn btn-primary" style="padding:6px 10px;">Finalizar</button>
                         </form>
-                        {% if prestamo.renovaciones < 3 %} <form action="{% url 'renovar_prestamo' prestamo.id %}"
-                            method="post">
-                            {% csrf_token %}
-                            <button type="submit"
-                                style="background: var(--neon-purple); border:none; color: white; padding: 4px 8px; border-radius: 4px; cursor:pointer;">Renovar</button>
+                        {% if prestamo.renovaciones < 3 %}
+                            <form action="{% url 'renovar_prestamo' prestamo.id %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary">Renovar</button>
                             </form>
-                            {% endif %}
-                            {% endif %}
-                            <a href="{% url 'editar_prestamo' prestamo.id %}" class="btn-add"
-                                style="padding: 4px 8px; font-size: 0.8em; background: #555;">✏️ Editar</a>
+                        {% endif %}
+                        {% endif %}
+                        <a href="{% url 'editar_prestamo' prestamo.id %}" class="btn btn-secondary" style="padding:6px 8px; font-size:0.9em;">✏️ Editar</a>
                     </div>
                     {% else %}
                     <span style="color: var(--neon-green);">{{ prestamo.get_estado_display }}</span>

@@ -40,7 +40,17 @@
             display: flex;
             flex-direction: column;
             position: fixed;
-            height: 100%;
+            height: 100vh; /* asegurar altura completa */
+            overflow-y: auto; /* permitir scroll si el contenido excede */
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 2.5rem; /* espacio extra para que el botón de salir no quede tapado */
+        }
+
+        /* Hacemos que el nav dentro de la barra sea el área que se desplaza */
+        .sidebar nav {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding-right: 0.25rem; /* evitar que el scroll tape contenido */
         }
 
         .logo {
@@ -245,6 +255,44 @@
             box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
         }
 
+        /* Selects oscuros por defecto para tema */
+        select, select.select-dark {
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 6px;
+            padding: 0.6rem;
+        }
+        select option {
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+        }
+        select::-ms-expand { display: none; }
+
+        .btn {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: box-shadow .2s, transform .08s;
+        }
+        .btn-primary {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 10px rgba(0,243,255,0.2);
+        }
+        .btn-primary:hover { box-shadow: 0 0 20px rgba(0,243,255,0.35); transform: translateY(-2px); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.03);
+            color: #e2e8f0;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .btn-danger {
+            background: var(--neon-red);
+            color: #fff;
+        }
+
         label {
             display: block;
             margin-bottom: 0.5rem;
@@ -342,15 +390,19 @@
                 <span>Autores</span>
             </a>
 
+            {% if can_view_prestamos %}
             <a href="{% url 'lista_prestamos' %}" class="menu-item">
                 <span>Préstamos</span>
             </a>
+            {% endif %}
 
+            {% if can_view_multas %}
             <a href="{% url 'lista_multa' %}" class="menu-item">
-                <span>Mis Multas</span>
+                <span>Multas</span>
             </a>
+            {% endif %}
 
-            {% if user.is_superuser or user.is_staff %}
+            {% if is_admin %}
             <div
                 style="margin: 1.5rem 0 0.5rem 1rem; color: var(--neon-red); font-size: 0.7rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
                 ADMINISTRACION STARAX</div>
@@ -366,7 +418,7 @@
             <a href="{% url 'ver_logs' %}" class="menu-item">
                 <span>📜 Auditoría</span>
             </a>
-            {% endif %}
+            {% endif %} 
 
             <div style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
                 {% if user.is_authenticated %}
@@ -415,6 +467,32 @@
         {% block contenido %}
         {% endblock %}
     </main>
+
+    <script>
+        // Función para mostrar/ocultar y rellenar monto cuando se selecciona tipo de daño en finalizar préstamo
+        function onTipoDanoChange(selectElem, multaDeterioroDefault, multaPerdidaDefault, prestamoId) {
+            try {
+                const val = selectElem.value;
+                const input = document.getElementById('monto_dano_' + prestamoId);
+                if (!input) return;
+                if (val === 'd') {
+                    input.style.display = 'inline-block';
+                    input.value = (multaDeterioroDefault !== undefined && multaDeterioroDefault !== null) ? multaDeterioroDefault : '';
+                    input.readOnly = false;
+                } else if (val === 'p') {
+                    input.style.display = 'inline-block';
+                    input.value = (multaPerdidaDefault !== undefined && multaPerdidaDefault !== null) ? multaPerdidaDefault : '';
+                    input.readOnly = false;
+                } else {
+                    input.style.display = 'none';
+                    input.value = '';
+                    input.readOnly = false;
+                }
+            } catch (err) {
+                console.error('onTipoDanoChange error:', err);
+            }
+        }
+    </script>
 
 </body>
 

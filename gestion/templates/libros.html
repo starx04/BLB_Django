@@ -4,9 +4,9 @@
 <section class="recent-section">
     <div class="section-header">
         <h2>Catálogo de Libros</h2>
-        {% if user.is_superuser or "Bodeguero" in user.groups.all.0.name or "Administrador" in user.groups.all.0.name %}
+        {% if can_add_books %}
         <a href="{% url 'crear_libros' %}" class="btn-add">➕ Nuevo Libro</a>
-        {% endif %}
+        {% endif %} 
     </div>
     <table>
         <thead>
@@ -43,14 +43,13 @@
                 </td>
                 <td>
                     <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                        {% if user.is_superuser or "Bodeguero" in user.groups.all.0.name or "Administrador" in
-                        user.groups.all.0.name %}
+                        {% if can_edit_books %}
                         <a href="{% url 'editar_libro' libro.id %}" class="btn-add"
                             style="font-size: 0.8em; padding: 5px 10px; background: var(--neon-blue); color: #fff;">
                             Editar
                         </a>
-                        {% endif %}
-                        {% if libro.esta_disponible %}
+                        {% endif %} 
+                        {% if libro.esta_disponible and is_cliente %}
                         <a href="{% url 'crear_prestamo' %}?libro_id={{ libro.id }}" class="btn-add"
                             style="font-size: 0.8em; padding: 5px 10px;">
                             Solicitar
